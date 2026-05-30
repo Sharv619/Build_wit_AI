@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "Node16",
     "noImplicitReturns": true,
     "noUnusedLocals": false,
     "outDir": "lib",
+    "rootDir": "src",
     "sourceMap": true,
     "strict": true,
     "target": "es2020",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "Node16"
   },
   "compileOnSave": false,
   "include": ["src"]
