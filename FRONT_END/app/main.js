@@ -8,7 +8,6 @@ import {
   getFirestore,
   limit,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -19,6 +18,7 @@ const firebaseConfig = window.MEDIMATE_FIREBASE_CONFIG;
 const householdId = "demo-household-david-rose";
 const davidId = "demo-david";
 const roseId = "demo-rose";
+const fallbackCaregiverId = "demo-browser-caregiver";
 
 if (!firebaseConfig || firebaseConfig.apiKey.includes("REPLACE_WITH")) {
   setStatus("Add your Firebase Web app config in FRONT_END/app/firebase-config.js before deploying Hosting.", true);
@@ -40,7 +40,15 @@ const eventTriggerEl = document.getElementById("event-trigger");
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    await signInAnonymously(auth);
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      console.warn("Anonymous Auth unavailable. Falling back to open demo mode.", error);
+      currentUser = { uid: fallbackCaregiverId };
+      setStatus("Connected in open demo mode. Anonymous Auth is not enabled.");
+      await ensureCaregiverProfile(currentUser.uid);
+      subscribeToFirestore();
+    }
     return;
   }
 
@@ -55,6 +63,8 @@ document.getElementById("save-medication").addEventListener("click", saveMedicat
 document.getElementById("record-response").addEventListener("click", recordResponse);
 document.getElementById("complete-event").addEventListener("click", completeEvent);
 document.getElementById("leaving-home").addEventListener("click", simulateLeavingHome);
+document.getElementById("play-reminder").addEventListener("click", playReminder);
+document.getElementById("listen-response").addEventListener("click", listenForResponse);
 eventTriggerEl.addEventListener("change", render);
 
 async function ensureCaregiverProfile(uid) {
@@ -165,6 +175,52 @@ async function recordResponse() {
   document.getElementById("response-text").value = "";
 }
 
+function playReminder() {
+  const medication = selectedMedicationId
+    ? medications.find((med) => med.id === selectedMedicationId)
+    : medicationForCurrentEvent();
+
+  if (!medication) {
+    setStatus("No medication found for this event. Seed or add a medication first.", true);
+    return;
+  }
+
+  const message = `David, it is ${formatTrigger(eventTriggerEl.value)}. Please take ${medication.dose} of ${medication.name} if this matches your doctor's or pharmacist's instructions.`;
+  speak(message);
+  setStatus("Playing voice reminder.");
+}
+
+function listenForResponse() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const input = document.getElementById("response-text");
+  const button = document.getElementById("listen-response");
+
+  if (!SpeechRecognition) {
+    input.focus();
+    setStatus("Voice input is not supported in this browser. Type the response instead.", true);
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-AU";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  button.textContent = "Listening...";
+  recognition.onresult = (event) => {
+    const transcript = event.results?.[0]?.[0]?.transcript || "";
+    input.value = transcript;
+    setStatus(`Heard: ${transcript}`);
+  };
+  recognition.onerror = (event) => {
+    setStatus(`Voice input failed: ${event.error}. Type the response instead.`, true);
+  };
+  recognition.onend = () => {
+    button.innerHTML = '<span class="material-symbols-outlined align-middle">mic</span> Speak Response';
+  };
+  recognition.start();
+}
+
 async function completeEvent() {
   requireUser();
   const trigger = eventTriggerEl.value;
@@ -247,17 +303,21 @@ function subscribeToFirestore() {
     medications = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     if (!selectedMedicationId && medications[0]) selectedMedicationId = medications[0].id;
     render();
-  });
+  }, handleSnapshotError("medications"));
 
-  onSnapshot(query(collection(db, "medicationLogs"), where("householdId", "==", householdId), orderBy("createdAt", "desc"), limit(30)), (snapshot) => {
-    logs = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  onSnapshot(query(collection(db, "medicationLogs"), where("householdId", "==", householdId), limit(30)), (snapshot) => {
+    logs = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortCreatedDesc);
     render();
-  });
+  }, handleSnapshotError("medication logs"));
 
-  onSnapshot(query(collection(db, "notifications"), where("householdId", "==", householdId), orderBy("createdAt", "desc"), limit(20)), (snapshot) => {
-    notifications = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  onSnapshot(query(collection(db, "notifications"), where("householdId", "==", householdId), limit(20)), (snapshot) => {
+    notifications = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortCreatedDesc);
     render();
-  });
+  }, handleSnapshotError("notifications"));
 }
 
 function render() {
@@ -361,9 +421,36 @@ function isFinalStatus(status) {
   return ["taken", "snoozed", "missed", "refused", "help_requested"].includes(status);
 }
 
+function handleSnapshotError(label) {
+  return (error) => {
+    console.error(`Could not read ${label}`, error);
+    setStatus(`Could not read ${label}: ${error.message}`, true);
+  };
+}
+
+function sortCreatedDesc(a, b) {
+  const aTime = a.createdAt?.toMillis?.() ?? 0;
+  const bTime = b.createdAt?.toMillis?.() ?? 0;
+  return bTime - aTime;
+}
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.className = `text-sm font-semibold ${isError ? "text-error" : "text-on-surface-variant"}`;
+}
+
+function speak(message) {
+  if (!("speechSynthesis" in window)) {
+    setStatus("Voice playback is not supported in this browser.", true);
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = "en-AU";
+  utterance.rate = 0.88;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
 }
 
 function labelFor(status) {
@@ -394,4 +481,3 @@ function escapeHtml(value) {
     "'": "&#039;"
   }[char]));
 }
-

@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isDemoHousehold(householdId) {
+      return householdId == 'demo-household-david-rose';
+    }
+
     function userDoc(uid) {
       return get(/databases/$(database)/documents/users/$(uid));
     }
@@ -26,15 +30,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (
+      allow read: if resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
         request.auth.uid == userId ||
         householdIdFor(request.auth.uid) == resource.data.householdId
       );
-      allow create: if signedIn() && (
+      allow create: if request.resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
         request.auth.uid == userId ||
         isCaregiverFor(request.resource.data.householdId)
       );
-      allow update: if signedIn() && (
+      allow update: if resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
         request.auth.uid == userId ||
         isCaregiverFor(resource.data.householdId)
       );
@@ -42,42 +46,42 @@ service cloud.firestore {
     }
 
     match /households/{householdId} {
-      allow read: if isLinkedToHousehold(householdId);
-      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isCaregiverFor(householdId);
+      allow read: if isDemoHousehold(householdId) || isLinkedToHousehold(householdId);
+      allow create: if isDemoHousehold(householdId) || signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isDemoHousehold(householdId) || isCaregiverFor(householdId);
       allow delete: if false;
     }
 
     match /medications/{medicationId} {
-      allow read: if isLinkedToHousehold(resource.data.householdId);
-      allow create: if isCaregiverFor(request.resource.data.householdId);
-      allow update: if isCaregiverFor(resource.data.householdId);
+      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
+      allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
       allow delete: if false;
     }
 
     match /routineEvents/{eventId} {
-      allow read: if isLinkedToHousehold(resource.data.householdId);
-      allow create: if isLinkedToHousehold(request.resource.data.householdId);
-      allow update: if isLinkedToHousehold(resource.data.householdId);
+      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
+      allow update: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
       allow delete: if false;
     }
 
     match /medicationLogs/{logId} {
-      allow read: if isLinkedToHousehold(resource.data.householdId);
-      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
       allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow read: if isLinkedToHousehold(resource.data.householdId);
-      allow create, update: if isLinkedToHousehold(request.resource.data.householdId);
+      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow create, update: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
       allow delete: if false;
     }
 
     match /scriptUploads/{uploadId} {
-      allow read: if isLinkedToHousehold(resource.data.householdId);
-      allow create: if isCaregiverFor(request.resource.data.householdId);
-      allow update: if isCaregiverFor(resource.data.householdId);
+      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
+      allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
       allow delete: if false;
     }
   }
