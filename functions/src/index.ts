@@ -17,9 +17,9 @@ admin.initializeApp();
 
 const db = admin.firestore();
 const storage = admin.storage();
-const ttsClient = new textToSpeech.TextToSpeechClient();
 const finalStatuses: MedicationStatus[] = ["taken", "snoozed", "refused", "help_requested", "missed"];
 const defaultChirpVoice = "en-US-Chirp3-HD-Charon";
+let ttsClient: textToSpeech.TextToSpeechClient | undefined;
 
 export const classifyMedicationResponse = onCall(async (request) => {
   const text = stringField(request.data, "text");
@@ -160,7 +160,7 @@ export const generateChirpReminderAudio = onCall(async (request) => {
   }
 
   const message = reminderCopy(medicationName, dose, trigger);
-  const [response] = await ttsClient.synthesizeSpeech({
+  const [response] = await textToSpeechClient().synthesizeSpeech({
     input: { text: message },
     voice: {
       languageCode: voiceName.slice(0, 5),
@@ -428,6 +428,11 @@ function booleanField(data: unknown, field: string): boolean {
     throw new HttpsError("invalid-argument", `Missing required boolean field: ${field}`);
   }
   return data[field];
+}
+
+function textToSpeechClient(): textToSpeech.TextToSpeechClient {
+  ttsClient ??= new textToSpeech.TextToSpeechClient();
+  return ttsClient;
 }
 
 function normalizeStatus(status: MedicationStatus | undefined, intent: string): MedicationStatus {
