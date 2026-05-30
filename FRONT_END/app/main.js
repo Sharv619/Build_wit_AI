@@ -133,13 +133,31 @@ async function seedDemoData() {
 
 async function saveMedication() {
   requireUser();
-  await addMedication({
+  const medication = {
     name: valueOf("med-name"),
     dose: valueOf("med-dose"),
     instructions: valueOf("med-instructions"),
     source: valueOf("med-source"),
     eventTriggers: [eventTriggerEl.value]
-  });
+  };
+  const docRef = await addMedication(medication);
+
+  // Demo UX guard: render the new medication immediately even if the Firestore
+  // listener is delayed or the hosted demo is running in open fallback mode.
+  const savedMedication = {
+    id: docRef.id,
+    householdId,
+    userId: eleanorId,
+    ...medication,
+    active: true,
+    createdBy: currentUser.uid
+  };
+  medications = [
+    savedMedication,
+    ...medications.filter((item) => item.id !== docRef.id)
+  ];
+  selectedMedicationId = docRef.id;
+  render();
   setStatus("Medication saved to Firestore.");
 }
 
@@ -181,8 +199,11 @@ async function recordResponse() {
 }
 
 async function playReminder() {
-  const medication = selectedMedicationId
+  const selectedMedication = selectedMedicationId
     ? medications.find((med) => med.id === selectedMedicationId)
+    : null;
+  const medication = selectedMedication?.eventTriggers?.includes(eventTriggerEl.value)
+    ? selectedMedication
     : medicationForCurrentEvent();
 
   if (!medication) {
