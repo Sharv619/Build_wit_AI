@@ -90,7 +90,7 @@ Firestore
 
 ## Trusted Family Voice Reminders
 
-Pilly's differentiator is familiar, trusted reminder delivery. The MVP supports uploaded or recorded family voice reminder audio, attached to a medication and event by a caregiver. When the senior selects `Play Reminder`, the app plays the trusted family recording if one exists. If no recording exists, it falls back to the existing browser speech reminder. The caregiver can replace or delete the demo recording for the selected medication/event.
+Pilly's differentiator is familiar, trusted reminder delivery. The MVP supports uploaded or browser-recorded family voice reminder audio, attached to a medication and event by a caregiver. When the senior selects `Play Reminder`, the app plays the trusted family recording if one exists. If no recording exists, it falls back to the existing browser speech reminder. The caregiver can record, upload, replace, or delete the demo recording for the selected medication/event.
 
 This is not synthetic voice cloning. The current implementation stores caregiver-uploaded audio in Firebase Storage and stores metadata in Firestore:
 
@@ -103,7 +103,7 @@ This is not synthetic voice cloning. The current implementation stores caregiver
 - `messageType: "recorded"`
 - `createdAt`
 
-The upload flow requires the caregiver to confirm: "I confirm I have permission to use this person's voice for medication reminders." The UI also warns caregivers to use calm, supportive reminders only and avoid guilt-based or manipulative language.
+The record/upload flow requires the caregiver to confirm: "I confirm I have permission to use this person's voice for medication reminders." The UI also warns caregivers to use calm, supportive reminders only and avoid guilt-based or manipulative language.
 
 Allowed example: "Hi Dad, it's time for your evening medication. Please take it with water."
 
@@ -129,7 +129,7 @@ Screenshots from the design and demo iterations are stored in `FRONT_END/*/scree
 6. Select `Record Response`.
 7. Select `Complete Event` to trigger missed-dose handling for unresolved medicines.
 8. Select `Simulate Leaving Home` to create a leaving-home reminder notification.
-9. To test family voice reminders, choose a medication/event, upload a recorded audio file in `Trusted Family Voice`, confirm consent, then select `Play Reminder`.
+9. To test family voice reminders, choose a medication/event, record audio or upload an audio file in `Trusted Family Voice`, confirm consent, save it, then select `Play Reminder`.
 
 For local function checks:
 

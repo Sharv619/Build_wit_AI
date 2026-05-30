@@ -22,6 +22,7 @@
 - [x] Preserve live Firestore dashboard updates.
 - [x] Store recorded family voice reminder audio in Firebase Storage.
 - [x] Store family voice reminder metadata in Firestore `voiceReminders`.
+- [x] Add browser recording controls for family voice reminders.
 - [x] Require a visible consent checkbox before uploading a family voice reminder.
 - [x] Prefer a matching family voice reminder when the senior selects `Play Reminder`.
 - [x] Fall back to browser speech synthesis when no family recording exists.

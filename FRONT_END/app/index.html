@@ -126,6 +126,17 @@
             <option value="caregiver">Caregiver</option>
             <option value="other">Other</option>
           </select>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <button id="start-family-recording" class="h-14 rounded-full border-2 border-secondary px-5 text-lg font-bold text-secondary">
+              <span class="material-symbols-outlined align-middle">mic</span>
+              Record
+            </button>
+            <button id="stop-family-recording" class="h-14 rounded-full border-2 border-outline-variant px-5 text-lg font-bold text-on-surface-variant" disabled>
+              <span class="material-symbols-outlined align-middle">stop_circle</span>
+              Stop
+            </button>
+          </div>
+          <audio id="family-recording-preview" class="hidden w-full" controls></audio>
           <input id="voice-file" type="file" accept="audio/*" class="rounded-2xl border-2 border-outline-variant bg-white px-5 py-4 text-base font-semibold" />
           <label class="flex items-start gap-3 rounded-2xl border-2 border-outline-variant bg-white p-4 text-base font-bold">
             <input id="voice-consent" type="checkbox" class="mt-1 h-5 w-5 rounded border-outline-variant text-primary" />

@@ -42,6 +42,10 @@ let logs = [];
 let notifications = [];
 let voiceReminders = [];
 let selectedMedicationId = null;
+let familyRecorder = null;
+let familyRecordingChunks = [];
+let familyRecordingBlob = null;
+let familyRecordingUrl = "";
 
 const statusEl = document.getElementById("connection-status");
 const eventTriggerEl = document.getElementById("event-trigger");
@@ -76,6 +80,8 @@ document.getElementById("play-reminder").addEventListener("click", playReminder)
 document.getElementById("listen-response").addEventListener("click", listenForResponse);
 document.getElementById("save-voice-reminder").addEventListener("click", saveVoiceReminder);
 document.getElementById("delete-voice-reminder").addEventListener("click", deleteVoiceReminder);
+document.getElementById("start-family-recording").addEventListener("click", startFamilyRecording);
+document.getElementById("stop-family-recording").addEventListener("click", stopFamilyRecording);
 eventTriggerEl.addEventListener("change", render);
 
 async function ensureCaregiverProfile(uid) {
@@ -236,7 +242,9 @@ async function playReminder() {
 async function saveVoiceReminder() {
   requireUser();
   const medicationId = selectedMedicationId || medicationForCurrentEvent()?.id;
-  const file = document.getElementById("voice-file").files?.[0];
+  const fileInput = document.getElementById("voice-file");
+  const file = fileInput.files?.[0];
+  const audioBlob = familyRecordingBlob || file;
   const speakerName = valueOf("voice-speaker");
   const relationship = valueOf("voice-relationship");
   const consentConfirmed = document.getElementById("voice-consent").checked;
@@ -249,8 +257,8 @@ async function saveVoiceReminder() {
     setStatus("Add the speaker name before saving a family voice reminder.", true);
     return;
   }
-  if (!file) {
-    setStatus("Choose a recorded audio file before saving a family voice reminder.", true);
+  if (!audioBlob) {
+    setStatus("Record or choose an audio file before saving a family voice reminder.", true);
     return;
   }
   if (!consentConfirmed) {
@@ -267,11 +275,11 @@ async function saveVoiceReminder() {
   }
 
   const voiceReminderRef = doc(collection(db, "voiceReminders"));
-  const extension = file.name.split(".").pop()?.toLowerCase() || "webm";
+  const extension = file?.name.split(".").pop()?.toLowerCase() || "webm";
   const storagePath = `households/${householdId}/voiceReminders/${voiceReminderRef.id}.${extension}`;
 
-  await uploadBytes(ref(storage, storagePath), file, {
-    contentType: file.type || "audio/webm",
+  await uploadBytes(ref(storage, storagePath), audioBlob, {
+    contentType: audioBlob.type || "audio/webm",
     customMetadata: {
       householdId,
       medicationId,
@@ -297,8 +305,77 @@ async function saveVoiceReminder() {
     createdAt: serverTimestamp()
   });
 
-  document.getElementById("voice-file").value = "";
+  fileInput.value = "";
+  clearFamilyRecordingPreview();
   setStatus(`Family voice reminder saved for ${formatTrigger(trigger)}.`);
+}
+
+async function startFamilyRecording() {
+  requireUser();
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    setStatus("Recording is not supported in this browser. Upload an audio file instead.", true);
+    return;
+  }
+
+  try {
+    clearFamilyRecordingPreview();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    familyRecordingChunks = [];
+    const mimeType = supportedAudioMimeType();
+    familyRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    familyRecorder.ondataavailable = (event) => {
+      if (event.data?.size) familyRecordingChunks.push(event.data);
+    };
+    familyRecorder.onstop = () => {
+      familyRecordingBlob = new Blob(familyRecordingChunks, { type: familyRecorder.mimeType || "audio/webm" });
+      familyRecorder.stream.getTracks().forEach((track) => track.stop());
+      familyRecordingUrl = URL.createObjectURL(familyRecordingBlob);
+      const preview = document.getElementById("family-recording-preview");
+      preview.src = familyRecordingUrl;
+      preview.classList.remove("hidden");
+      setFamilyRecordingButtons(false);
+      setStatus("Family voice recording ready. Confirm consent and save it.");
+    };
+
+    familyRecorder.start();
+    setFamilyRecordingButtons(true);
+    setStatus("Recording family voice reminder...");
+  } catch (error) {
+    console.warn("Family voice recording failed.", error);
+    setFamilyRecordingButtons(false);
+    setStatus("Could not access the microphone. Upload an audio file instead.", true);
+  }
+}
+
+function stopFamilyRecording() {
+  if (familyRecorder?.state === "recording") {
+    familyRecorder.stop();
+  }
+}
+
+function supportedAudioMimeType() {
+  if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+  if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+  return "";
+}
+
+function setFamilyRecordingButtons(isRecording) {
+  document.getElementById("start-family-recording").disabled = isRecording;
+  document.getElementById("stop-family-recording").disabled = !isRecording;
+}
+
+function clearFamilyRecordingPreview() {
+  if (familyRecordingUrl) URL.revokeObjectURL(familyRecordingUrl);
+  familyRecordingBlob = null;
+  familyRecordingUrl = "";
+  familyRecordingChunks = [];
+  const preview = document.getElementById("family-recording-preview");
+  preview.removeAttribute("src");
+  preview.classList.add("hidden");
 }
 
 async function deleteVoiceReminder() {
