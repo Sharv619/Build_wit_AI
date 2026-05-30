@@ -67,25 +67,25 @@ service cloud.firestore {
 
     match /routineEvents/{eventId} {
       allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Core event completion should go through Cloud Functions. Direct client writes
-      // are limited to authenticated linked users for non-demo expansion work.
-      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      // Prefer Cloud Functions when billing allows it. The demo household keeps a
+      // Spark-plan fallback so the hosted portfolio demo works without Functions.
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
       allow update: if isLinkedToHousehold(resource.data.householdId);
       allow delete: if false;
     }
 
     match /medicationLogs/{logId} {
       allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Medication response classification and logging are authoritative backend work.
-      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      // Prefer backend-owned logging. The demo household keeps a Spark-plan
+      // fallback for portfolio hosting without billable Cloud Functions.
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
       allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
       allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Alert creation should be server-owned. Client update remains for future
-      // authenticated acknowledgement flows only.
-      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      // Prefer server-owned alerts. The demo household keeps a Spark-plan fallback.
+      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
       allow update: if isLinkedToHousehold(resource.data.householdId);
       allow delete: if false;
     }
