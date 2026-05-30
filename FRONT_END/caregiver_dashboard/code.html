@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MediMate - Caregiver Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#512c38",
+                    "primary-fixed-dim": "#b0cfad",
+                    "on-surface-variant": "#434841",
+                    "primary-fixed": "#ccebc7",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#ffdbd1",
+                    "primary": "#4a6549",
+                    "on-primary-fixed": "#07200b",
+                    "tertiary-fixed": "#ffd9e2",
+                    "surface-variant": "#e4e2de",
+                    "surface-dim": "#dbdad6",
+                    "outline": "#737970",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#6f3728",
+                    "surface-container-high": "#eae8e4",
+                    "on-secondary-fixed": "#380d03",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#623b48",
+                    "on-surface": "#1b1c1a",
+                    "on-primary-fixed-variant": "#334d33",
+                    "on-tertiary-fixed": "#30111c",
+                    "on-secondary-container": "#783f2f",
+                    "on-primary-container": "#243d24",
+                    "inverse-surface": "#30312e",
+                    "on-error-container": "#93000a",
+                    "primary-container": "#8ba888",
+                    "tertiary-container": "#c593a1",
+                    "secondary": "#8b4e3d",
+                    "secondary-container": "#fdad98",
+                    "surface-tint": "#4a6549",
+                    "inverse-on-surface": "#f2f0ed",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c3c8bf",
+                    "tertiary": "#7d525f",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed-dim": "#ffb5a1",
+                    "surface-container-highest": "#e4e2de",
+                    "inverse-primary": "#b0cfad",
+                    "tertiary-fixed-dim": "#eeb8c7",
+                    "background": "#fbf9f5",
+                    "surface-container-low": "#f5f3ef",
+                    "surface": "#fbf9f5",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#fbf9f5",
+                    "surface-container": "#efeeea",
+                    "on-background": "#1b1c1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "24px",
+                    "stack-lg": "40px",
+                    "margin-tablet": "48px",
+                    "gutter": "16px",
+                    "stack-md": "24px",
+                    "stack-sm": "12px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "label-lg": ["Quicksand"],
+                    "body-lg": ["Quicksand"],
+                    "disclaimer": ["Quicksand"],
+                    "body-md": ["Quicksand"],
+                    "headline-lg": ["Quicksand"],
+                    "headline-md": ["Quicksand"],
+                    "display-lg": ["Quicksand"]
+            },
+            "fontSize": {
+                    "label-lg": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "body-lg": ["24px", {"lineHeight": "36px", "fontWeight": "500"}],
+                    "disclaimer": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "body-md": ["22px", {"lineHeight": "32px", "fontWeight": "500"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                    "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        body {
+            font-family: 'Quicksand', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .plinth-shadow {
+            box-shadow: 0 4px 20px 0 rgba(74, 101, 73, 0.15);
+        }
+        .active-sink:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px 0 rgba(74, 101, 73, 0.1);
+        }
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 flex items-center px-margin-mobile h-24 bg-surface dark:bg-surface-dim shadow-[0_4px_20px_0_rgba(74,101,73,0.15)]">
+<div class="flex items-center w-full max-w-2xl mx-auto">
+<button class="mr-4 p-2 active:scale-95 transition-transform duration-150 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-primary text-3xl">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg text-primary">Dad's Schedule</h1>
+</div>
+</header>
+<main class="pt-32 pb-40 px-margin-mobile max-w-2xl mx-auto space-y-stack-md">
+<!-- Alert Section (Missed Dose) -->
+<div class="hidden animate-bounce" id="alert-container">
+<div class="bg-error-container text-on-error-container p-gutter rounded-[2rem] border-2 border-error flex items-start space-x-4 shadow-lg">
+<span class="material-symbols-outlined text-error text-3xl shrink-0" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<h3 class="font-label-lg text-label-lg">Missed Dose Alert</h3>
+<p class="font-body-md text-body-md opacity-90">Dad missed his 12:00 PM Multivitamin. Please check in with him.</p>
+</div>
+</div>
+</div>
+<!-- Date Header -->
+<div class="flex justify-between items-end mb-4">
+<div>
+<p class="font-label-lg text-secondary uppercase tracking-widest text-sm">Today</p>
+<h2 class="font-headline-md text-headline-md text-on-surface">Monday, Oct 23</h2>
+</div>
+<div class="bg-primary-container/20 px-4 py-2 rounded-full border border-primary-fixed">
+<p class="font-label-lg text-primary text-sm">3 Meds Scheduled</p>
+</div>
+</div>
+<!-- Schedule List -->
+<div class="space-y-gutter">
+<!-- Item 1: Taken (Warm Sage Green Design Language) -->
+<div class="bg-white dark:bg-surface-container p-stack-md rounded-[2rem] border-2 border-[#E6E2D3] flex items-center justify-between shadow-[0_8px_30px_0_rgba(74,101,73,0.1)] active-sink transition-all">
+<div class="flex items-center space-x-gutter">
+<div class="bg-primary/10 p-4 rounded-full">
+<span class="material-symbols-outlined text-primary text-4xl">medical_services</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Lisinopril</p>
+<p class="font-body-md text-on-surface-variant">8:00 AM • Blood Pressure</p>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-lg text-primary text-sm mt-1">Taken</span>
+</div>
+</div>
+<!-- Item 2: Pending (Target for Simulation) -->
+<div class="bg-white dark:bg-surface-container p-stack-md rounded-[2rem] border-2 border-[#E6E2D3] flex items-center justify-between shadow-[0_8px_30px_0_rgba(74,101,73,0.1)] active-sink transition-all" id="dose-12pm">
+<div class="flex items-center space-x-gutter">
+<div class="bg-secondary/10 p-4 rounded-full">
+<span class="material-symbols-outlined text-secondary text-4xl">pill</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Multivitamin</p>
+<p class="font-body-md text-on-surface-variant">12:00 PM • Daily Health</p>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary-container text-4xl">schedule</span>
+<span class="font-label-lg text-secondary-container text-sm mt-1">Pending</span>
+</div>
+</div>
+<!-- Item 3: Upcoming -->
+<div class="bg-white dark:bg-surface-container p-stack-md rounded-[2rem] border-2 border-[#E6E2D3] flex items-center justify-between shadow-[0_8px_30px_0_rgba(74,101,73,0.1)] active-sink transition-all">
+<div class="flex items-center space-x-gutter">
+<div class="bg-tertiary/10 p-4 rounded-full">
+<span class="material-symbols-outlined text-tertiary text-4xl">water_drop</span>
+</div>
+<div>
+<p class="font-label-lg text-on-surface">Metformin</p>
+<p class="font-body-md text-on-surface-variant">6:00 PM • Blood Sugar</p>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-outline-variant text-4xl">pending</span>
+<span class="font-label-lg text-on-surface-variant text-sm mt-1">Upcoming</span>
+</div>
+</div>
+</div>
+<!-- Special Action Button (Terracotta Accents) -->
+<div class="pt-stack-md">
+<button class="w-full h-16 bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded-2xl flex items-center justify-center space-x-3 active:scale-95 transition-all duration-200 shadow-md border-2 border-secondary" onclick="simulateMissedDose()">
+<span class="material-symbols-outlined">notification_important</span>
+<span>Simulate Missed Dose</span>
+</button>
+<p class="mt-4 text-center font-disclaimer text-disclaimer text-on-surface-variant italic">
+                Demo tool: Triggers an immediate missed dose notification for Dad's lunch meds.
+            </p>
+</div>
+<!-- Atmospheric Image -->
+<div class="rounded-3xl overflow-hidden mt-stack-lg border-2 border-[#E6E2D3] shadow-lg">
+<img class="w-full h-48 object-cover" data-alt="A warm and cozy scene of a morning sunbeam hitting a kitchen table with a wooden surface. A clear glass of water sits next to a small wooden pill organizer. The lighting is soft and golden, creating a sense of reliability and comfort." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRWMC0GHfX_qS6xrRskRpuZmAlAJW9zHoFhBM9nU6XZXeu2gZZ_J3KbDMCiMZhNfAVePFLX9jkeb3xESXpj67iVWiwWmOBhm2xfBHmBMyEYOn5QnQbimTWanWTX5FO2hWGjj3jAEXq-s6pkVoDq20QS8YX34n2jMZTJsnjBa6FZR9MQMyFC15cpnFPANkzXl05eluA4s9G3S6HsXxQZVaNo00WFnwTaFZMkp1IXPjigjBavL7alQMxM4ASrgSnGejUzWK1J2gfEAjP"/>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full px-margin-mobile py-stack-md text-center mb-[120px] bg-surface-container-low dark:bg-surface-container-high border-t-4 border-secondary">
+<div class="max-w-2xl mx-auto">
+<p class="font-label-lg text-label-lg text-secondary mb-2">MediMate</p>
+<p class="font-disclaimer text-disclaimer text-secondary dark:text-secondary-fixed-dim leading-snug">
+                MediMate does not provide medical advice. Always follow your doctor's or pharmacist's instructions.
+            </p>
+<div class="flex justify-center space-x-gutter mt-4">
+<a class="text-on-surface-variant hover:text-secondary-container font-disclaimer" href="#">Emergency Contacts</a>
+<span class="text-outline-variant">•</span>
+<a class="text-on-surface-variant hover:text-secondary-container font-disclaimer" href="#">Privacy Policy</a>
+</div>
+<p class="mt-4 font-label-lg text-sm text-on-surface-variant opacity-50">MediMate: Not a substitute for professional medical advice.</p>
+</div>
+</footer>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-gutter pb-8 pt-4 bg-surface-container-low dark:bg-surface-container-lowest border-t-2 border-outline-variant shadow-[0_-4px_20px_0_rgba(74,101,73,0.15)] rounded-t-[2rem]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-variant active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-4xl">event_note</span>
+<span class="font-label-lg text-label-lg text-xs mt-1">Reminders</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-on-primary-fixed-variant text-on-primary-container dark:text-primary-fixed rounded-full px-8 py-3 min-h-[72px] active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-lg text-label-lg text-xs mt-1">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-variant active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-4xl">settings</span>
+<span class="font-label-lg text-label-lg text-xs mt-1">Settings</span>
+</a>
+</nav>
+<script>
+        function simulateMissedDose() {
+            const alertBox = document.getElementById('alert-container');
+            const doseCard = document.getElementById('dose-12pm');
+            
+            // Show alert with animation
+            alertBox.classList.remove('hidden');
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the specific card with terracotta-inspired warning styles
+            doseCard.classList.remove('bg-white', 'dark:bg-surface-container');
+            doseCard.classList.add('bg-error-container', 'border-error');
+            
+            // Change status icon/text inside card
+            const statusIcon = doseCard.querySelector('.material-symbols-outlined:last-of-type');
+            const statusText = doseCard.querySelector('span.mt-1');
+            
+            if (statusIcon) {
+                statusIcon.textContent = 'error';
+                statusIcon.classList.remove('text-secondary-container');
+                statusIcon.classList.add('text-error');
+                statusIcon.style.fontVariationSettings = "'FILL' 1";
+            }
+            
+            if (statusText) {
+                statusText.textContent = 'MISSED';
+                statusText.classList.remove('text-secondary-container');
+                statusText.classList.add('text-error', 'font-bold');
+            }
+
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+        }
+    </script>
+</body></html>

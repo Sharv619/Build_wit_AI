@@ -1,6 +1,7 @@
 {
   "projects": {
     "default": "medimate-voice-demo"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }
-

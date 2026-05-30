@@ -1,0 +1,235 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Medication Setup - MediMate</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#512c38",
+                        "primary-fixed-dim": "#b0cfad",
+                        "on-surface-variant": "#434841",
+                        "primary-fixed": "#ccebc7",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#ffdbd1",
+                        "primary": "#4a6549",
+                        "on-primary-fixed": "#07200b",
+                        "tertiary-fixed": "#ffd9e2",
+                        "surface-variant": "#e4e2de",
+                        "surface-dim": "#dbdad6",
+                        "outline": "#737970",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#6f3728",
+                        "surface-container-high": "#eae8e4",
+                        "on-secondary-fixed": "#380d03",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#623b48",
+                        "on-surface": "#1b1c1a",
+                        "on-primary-fixed-variant": "#334d33",
+                        "on-tertiary-fixed": "#30111c",
+                        "on-secondary-container": "#783f2f",
+                        "on-primary-container": "#243d24",
+                        "inverse-surface": "#30312e",
+                        "on-error-container": "#93000a",
+                        "primary-container": "#8ba888",
+                        "tertiary-container": "#c593a1",
+                        "secondary": "#8b4e3d",
+                        "secondary-container": "#fdad98",
+                        "surface-tint": "#4a6549",
+                        "inverse-on-surface": "#f2f0ed",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c3c8bf",
+                        "tertiary": "#7d525f",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#ffb5a1",
+                        "surface-container-highest": "#e4e2de",
+                        "inverse-primary": "#b0cfad",
+                        "tertiary-fixed-dim": "#eeb8c7",
+                        "background": "#fbf9f5",
+                        "surface-container-low": "#f5f3ef",
+                        "surface": "#fbf9f5",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#fbf9f5",
+                        "surface-container": "#efeeea",
+                        "on-background": "#1b1c1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "24px",
+                        "stack-lg": "40px",
+                        "margin-tablet": "48px",
+                        "gutter": "16px",
+                        "stack-md": "24px",
+                        "stack-sm": "12px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "label-lg": ["Quicksand"],
+                        "body-lg": ["Quicksand"],
+                        "disclaimer": ["Quicksand"],
+                        "body-md": ["Quicksand"],
+                        "headline-lg": ["Quicksand"],
+                        "headline-md": ["Quicksand"],
+                        "display-lg": ["Quicksand"]
+                    },
+                    "fontSize": {
+                        "label-lg": ["20px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "body-lg": ["24px", {"lineHeight": "36px", "fontWeight": "500"}],
+                        "disclaimer": ["18px", {"lineHeight": "26px", "fontWeight": "600"}],
+                        "body-md": ["22px", {"lineHeight": "32px", "fontWeight": "500"}],
+                        "headline-lg": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        .input-focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(74, 101, 73, 0.2);
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>.mic-pulse { animation: pulse 2s infinite; } @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 101, 73, 0.4); } 70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(74, 101, 73, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74, 101, 73, 0); } }</style></head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col items-center">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex items-center px-margin-mobile h-24 bg-surface dark:bg-surface-dim shadow-[0_4px_20px_0_rgba(74,101,73,0.15)]">
+<button aria-label="Go back" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-surface-container-high active:scale-95 transition-transform duration-150"><div class="flex items-center gap-4 w-full"></div></button><button class="active:scale-95 transition-transform duration-150 p-2 rounded-full hover:bg-surface-container-high text-primary dark:text-primary-fixed-dim"><span class="material-symbols-outlined text-4xl" data-icon="menu">menu</span></button><h1 class="font-headline-lg text-headline-lg text-primary dark:text-primary-fixed-dim flex-grow">MediMate</h1><div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container relative group cursor-pointer"><span class="material-symbols-outlined" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span></div>
+
+</header>
+<!-- Main Content Canvas -->
+<main class="w-full max-w-[600px] mt-24 px-margin-mobile flex flex-col">
+<!-- Welcome Hero Section -->
+<section class="py-stack-md">
+<div class="mb-stack-md flex flex-col items-center text-center">
+<div class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center mb-stack-sm shadow-[0_8px_24px_rgba(74,101,73,0.2)]">
+<span class="material-symbols-outlined text-[48px] text-on-primary-container" data-icon="pill">pill</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">New Medication</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Let's set up your reminder together.</p>
+</div>
+<!-- Form Card with Large Rounded Corners -->
+<div class="bg-white dark:bg-surface-container rounded-3xl p-8 shadow-[0_8px_30px_0_rgba(74,101,73,0.1)] border-2 border-[#E6E2D3] space-y-stack-md">
+<!-- Medication Name Input - Oversized & High Contrast -->
+<div class="flex flex-col gap-3">
+<label class="font-label-lg text-label-lg text-primary" for="med_name">Medication Name</label>
+<div class="relative">
+<input class="w-full h-20 px-8 rounded-2xl border-2 border-outline-variant bg-surface-bright font-body-lg text-body-lg text-on-surface placeholder-on-surface-variant/40 input-focus-ring transition-all" id="med_name" placeholder="e.g. Lisinopril" type="text">
+<span class="absolute right-8 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-3xl" data-icon="edit">edit</span>
+</div>
+</div>
+<!-- Time Picker Row - Oversized & High Contrast -->
+<div class="flex flex-col gap-3">
+<label class="font-label-lg text-label-lg text-primary" for="med_time">Time</label>
+<div class="relative">
+<input class="w-full h-20 px-8 rounded-2xl border-2 border-outline-variant bg-surface-bright font-body-lg text-body-lg text-on-surface input-focus-ring transition-all" id="med_time" type="time" value="08:00">
+<span class="absolute right-8 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-3xl" data-icon="schedule">schedule</span>
+</div>
+</div>
+<!-- Instructions Input - Oversized & High Contrast -->
+<div class="flex flex-col gap-3">
+<label class="font-label-lg text-label-lg text-primary" for="med_notes">Instructions</label>
+<div class="relative">
+<textarea class="w-full min-h-[140px] p-8 rounded-2xl border-2 border-outline-variant bg-surface-bright font-body-lg text-body-lg text-on-surface placeholder-on-surface-variant/40 input-focus-ring transition-all resize-none" id="med_notes" placeholder="e.g. Take with food" rows="3"></textarea>
+<span class="absolute right-8 top-8 material-symbols-outlined text-outline text-3xl" data-icon="description">description</span>
+</div>
+</div>
+<!-- Image Context -->
+<div class="w-full aspect-[16/9] rounded-2xl overflow-hidden mt-stack-md shadow-inner relative border border-outline-variant">
+<img alt="Medication Context" class="w-full h-full object-cover grayscale-[0.2] brightness-105" data-alt="A macro photograph showing a variety of colorful medicine tablets and capsules resting on a soft textured linen surface. The lighting is warm and natural, suggesting a cozy morning at home. The depth of field is shallow, focusing on the detail of the pills while the background blurs into a peaceful sage green and cream atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOmpUIAOos_yvF6J-nmTq2ZtZ2CC86fAHOl0DX0vhxYVigc9G_X5KkeZY2G7eFfIUEyNrBqhUNTewHlUX3-D3SLIdi_uUW5px3iOmFU7ev4db8QFRglYQVwtHcxKDnls0q2v3sYoCPXJJzgaxfDNdBQTQAR2FvqfPrUOs5UWChnYScdlAOfcAB43IRtTwbdoy24HONXTLU_uATw8xOxuPLiBNEmUPlvBttDQYrwElklJVRhitjnqK7zEs13ZzyokEivLPO4VRwra4l">
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="mt-stack-lg space-y-gutter">
+<button class="w-full h-20 bg-primary text-on-primary font-label-lg text-label-lg rounded-full shadow-[0_16px_32px_rgba(74,101,73,0.3)] active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 border-4 border-white" id="saveBtn">
+<span class="material-symbols-outlined text-3xl" data-icon="check_circle">check_circle</span>
+                    Save Medication
+                </button>
+<div class="bg-tertiary-container/20 border-l-8 border-tertiary p-6 rounded-2xl flex items-start gap-4">
+<span class="material-symbols-outlined text-tertiary text-3xl" data-icon="warning">warning</span>
+<p class="font-disclaimer text-disclaimer text-on-tertiary-container">
+                        Always follow your doctor's instructions.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Spacer for Footer/Nav -->
+<div class="h-32"></div>
+</main><nav class="fixed bottom-10 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-[500px] z-[60] flex justify-center items-center"><button class="mic-pulse group w-full h-24 bg-primary text-on-primary rounded-full shadow-[0_12px_40px_rgba(74,101,73,0.4)] flex items-center justify-center gap-4 border-4 border-primary-fixed active:scale-95 transition-all duration-200"><span class="material-symbols-outlined !text-5xl" data-icon="mic" style="font-variation-settings: 'FILL' 1;">mic</span><span class="font-display-lg text-2xl">Log Medication</span></button></nav>
+<!-- BottomNavBar -->
+<!-- Footer Disclaimer -->
+<footer class="w-full px-margin-mobile py-stack-md text-center bg-surface-container-low dark:bg-surface-container-high border-t-4 border-secondary dark:border-on-secondary-fixed-variant mb-[180px]">
+<div class="max-w-[600px] mx-auto">
+<p class="font-disclaimer text-disclaimer text-secondary dark:text-secondary-fixed-dim leading-snug">
+                MediMate does not provide medical advice. Always follow your doctor's or pharmacist's instructions.
+            </p>
+<div class="mt-stack-sm flex justify-center gap-gutter text-on-surface-variant font-label-lg text-sm opacity-70">
+<a class="hover:underline" href="#">Emergency Contacts</a>
+<span class="">•</span>
+<a class="hover:underline" href="#">Privacy Policy</a>
+</div>
+<p class="mt-4 font-label-lg text-sm text-on-surface-variant opacity-50">MediMate: Not a substitute for professional medical advice.</p>
+</div>
+</footer>
+<script>
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            const btn = this;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-3xl" data-icon="sync">sync</span> Saving...';
+            btn.classList.add('opacity-80');
+            
+            setTimeout(() => {
+                btn.innerHTML = '<span class="material-symbols-outlined text-3xl" data-icon="done_all">done_all</span> Saved!';
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-on-primary-fixed-variant');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalContent;
+                    btn.classList.remove('bg-on-primary-fixed-variant', 'opacity-80');
+                    btn.classList.add('bg-primary');
+                }, 2000);
+            }, 1000);
+        });
+
+        // Add soft focus interactions for all inputs
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.parentElement.classList.add('scale-[1.01]');
+                input.parentElement.parentElement.style.transition = 'transform 0.3s ease';
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+    </script>
+
+
+</body></html>

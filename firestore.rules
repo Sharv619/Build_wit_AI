@@ -30,13 +30,22 @@ service cloud.firestore {
         request.auth.uid == userId ||
         householdIdFor(request.auth.uid) == resource.data.householdId
       );
-      allow create, update: if signedIn() && request.auth.uid == userId;
+      allow create: if signedIn() && (
+        request.auth.uid == userId ||
+        isCaregiverFor(request.resource.data.householdId)
+      );
+      allow update: if signedIn() && (
+        request.auth.uid == userId ||
+        isCaregiverFor(resource.data.householdId)
+      );
       allow delete: if false;
     }
 
     match /households/{householdId} {
       allow read: if isLinkedToHousehold(householdId);
-      allow write: if isCaregiverFor(householdId);
+      allow create: if signedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isCaregiverFor(householdId);
+      allow delete: if false;
     }
 
     match /medications/{medicationId} {
@@ -73,4 +82,3 @@ service cloud.firestore {
     }
   }
 }
-

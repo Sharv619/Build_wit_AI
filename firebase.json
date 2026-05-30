@@ -3,8 +3,19 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
+  "hosting": {
+    "public": "FRONT_END/app",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   },
   "functions": [
     {
@@ -33,9 +44,6 @@
     "firestore": {
       "port": 8080
     },
-    "storage": {
-      "port": 9199
-    },
     "ui": {
       "enabled": true,
       "port": 4000
@@ -43,4 +51,3 @@
     "singleProjectMode": true
   }
 }
-
