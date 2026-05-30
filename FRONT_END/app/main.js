@@ -1,8 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-functions.js";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   getFirestore,
@@ -13,6 +15,7 @@ import {
   setDoc,
   where
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js";
 
 const firebaseConfig = window.PILLY_FIREBASE_CONFIG;
 const householdId = "demo-household-eleanor";
@@ -27,15 +30,22 @@ if (!firebaseConfig || firebaseConfig.apiKey.includes("REPLACE_WITH")) {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
+const functions = getFunctions(app);
+const recordMedicationResponseFn = httpsCallable(functions, "recordMedicationResponse");
+const completeRoutineEventFn = httpsCallable(functions, "completeRoutineEvent");
+const simulateLeavingHomeFn = httpsCallable(functions, "simulateLeavingHome");
 
 let currentUser = null;
 let medications = [];
 let logs = [];
 let notifications = [];
+let voiceReminders = [];
 let selectedMedicationId = null;
 
 const statusEl = document.getElementById("connection-status");
 const eventTriggerEl = document.getElementById("event-trigger");
+const voiceStatusEl = document.getElementById("voice-reminder-status");
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -64,9 +74,13 @@ document.getElementById("complete-event").addEventListener("click", completeEven
 document.getElementById("leaving-home").addEventListener("click", simulateLeavingHome);
 document.getElementById("play-reminder").addEventListener("click", playReminder);
 document.getElementById("listen-response").addEventListener("click", listenForResponse);
+document.getElementById("save-voice-reminder").addEventListener("click", saveVoiceReminder);
+document.getElementById("delete-voice-reminder").addEventListener("click", deleteVoiceReminder);
 eventTriggerEl.addEventListener("change", render);
 
 async function ensureCaregiverProfile(uid) {
+  // Demo-only bootstrap so anonymous browser sessions can read/write the Eleanor household.
+  // Production should provision household membership server-side.
   await setDoc(doc(db, "users", uid), {
     householdId,
     name: "Family caregiver",
@@ -79,6 +93,7 @@ async function ensureCaregiverProfile(uid) {
 
 async function seedDemoData() {
   requireUser();
+  // Demo-only Firestore seeding. Core medication workflows below go through Cloud Functions.
   await setDoc(doc(db, "households", householdId), {
     name: "Eleanor",
     primarySeniorId: eleanorId,
@@ -129,6 +144,8 @@ async function saveMedication() {
 }
 
 async function addMedication(data) {
+  // Demo-only medication creation for the hackathon UI. Production should move this behind
+  // a caregiver-authorized Cloud Function before real patient data is used.
   return addDoc(collection(db, "medications"), {
     householdId,
     userId: eleanorId,
@@ -149,24 +166,21 @@ async function recordResponse() {
   }
 
   const responseText = valueOf("response-text") || "I took it";
-  const classified = classifyResponse(responseText);
-  await addDoc(collection(db, "medicationLogs"), {
+  const result = await recordMedicationResponseFn({
     householdId,
     medicationId,
     userId: eleanorId,
-    status: classified.status,
     responseMethod: "typed",
     responseText,
-    refusalReason: classified.refusalReason || null,
-    refusalNote: classified.status === "refused" ? responseText : null,
-    createdAt: serverTimestamp()
+    refusalNote: responseText
   });
 
-  setStatus(`Recorded ${labelFor(classified.status)}.`);
+  const data = result.data || {};
+  setStatus(data.message || `Recorded ${labelFor(data.status)}.`);
   document.getElementById("response-text").value = "";
 }
 
-function playReminder() {
+async function playReminder() {
   const medication = selectedMedicationId
     ? medications.find((med) => med.id === selectedMedicationId)
     : medicationForCurrentEvent();
@@ -176,9 +190,111 @@ function playReminder() {
     return;
   }
 
+  const familyReminder = voiceReminderFor(medication.id, eventTriggerEl.value);
+  if (familyReminder) {
+    try {
+      const url = await getDownloadURL(ref(storage, familyReminder.storagePath));
+      const audio = new Audio(url);
+      await audio.play();
+      setStatus(`Playing ${familyReminder.speakerName}'s family voice reminder.`);
+      return;
+    } catch (error) {
+      console.warn("Family voice reminder playback failed. Falling back to speech synthesis.", error);
+      setStatus("Family voice reminder could not play. Using default reminder voice.", true);
+    }
+  }
+
   const message = `Eleanor, it is ${formatTrigger(eventTriggerEl.value)}. Please take ${medication.dose} of ${medication.name} if this matches your doctor's or pharmacist's instructions.`;
   speak(message);
   setStatus("Playing voice reminder.");
+}
+
+async function saveVoiceReminder() {
+  requireUser();
+  const medicationId = selectedMedicationId || medicationForCurrentEvent()?.id;
+  const file = document.getElementById("voice-file").files?.[0];
+  const speakerName = valueOf("voice-speaker");
+  const relationship = valueOf("voice-relationship");
+  const consentConfirmed = document.getElementById("voice-consent").checked;
+
+  if (!medicationId) {
+    setStatus("Select or seed a medication before saving a family voice reminder.", true);
+    return;
+  }
+  if (!speakerName) {
+    setStatus("Add the speaker name before saving a family voice reminder.", true);
+    return;
+  }
+  if (!file) {
+    setStatus("Choose a recorded audio file before saving a family voice reminder.", true);
+    return;
+  }
+  if (!consentConfirmed) {
+    setStatus("Confirm voice permission before uploading the family reminder.", true);
+    return;
+  }
+
+  const trigger = eventTriggerEl.value;
+  const existing = voiceReminderFor(medicationId, trigger);
+  if (existing?.id) {
+    // Demo replacement behavior: remove old metadata so the latest recording is authoritative.
+    // Production should also delete the old Storage object and keep an audit trail.
+    await deleteDoc(doc(db, "voiceReminders", existing.id));
+  }
+
+  const voiceReminderRef = doc(collection(db, "voiceReminders"));
+  const extension = file.name.split(".").pop()?.toLowerCase() || "webm";
+  const storagePath = `households/${householdId}/voiceReminders/${voiceReminderRef.id}.${extension}`;
+
+  await uploadBytes(ref(storage, storagePath), file, {
+    contentType: file.type || "audio/webm",
+    customMetadata: {
+      householdId,
+      medicationId,
+      routineEventTrigger: trigger,
+      messageType: "recorded"
+    }
+  });
+
+  // Demo/MVP metadata for a recorded familiar voice reminder. This stores consent
+  // confirmation and linkage only; it does not synthesize or clone any voice.
+  await setDoc(voiceReminderRef, {
+    userId: eleanorId,
+    householdId,
+    medicationId,
+    routineEventId: trigger,
+    routineEventTrigger: trigger,
+    speakerName,
+    relationship,
+    storagePath,
+    consentConfirmed: true,
+    messageType: "recorded",
+    createdBy: currentUser.uid,
+    createdAt: serverTimestamp()
+  });
+
+  document.getElementById("voice-file").value = "";
+  setStatus(`Family voice reminder saved for ${formatTrigger(trigger)}.`);
+}
+
+async function deleteVoiceReminder() {
+  requireUser();
+  const medicationId = selectedMedicationId || medicationForCurrentEvent()?.id;
+  const existing = medicationId ? voiceReminderFor(medicationId, eventTriggerEl.value) : null;
+
+  if (!existing) {
+    setStatus("No family voice reminder is saved for the selected medication/event.", true);
+    return;
+  }
+
+  try {
+    await deleteObject(ref(storage, existing.storagePath));
+  } catch (error) {
+    console.warn("Could not delete voice reminder audio. Removing metadata for demo cleanup.", error);
+  }
+
+  await deleteDoc(doc(db, "voiceReminders", existing.id));
+  setStatus("Family voice reminder deleted for this medication/event.");
 }
 
 function listenForResponse() {
@@ -215,77 +331,28 @@ function listenForResponse() {
 async function completeEvent() {
   requireUser();
   const trigger = eventTriggerEl.value;
-  const eventRef = await addDoc(collection(db, "routineEvents"), {
+  const result = await completeRoutineEventFn({
     householdId,
     userId: eleanorId,
     trigger,
-    status: "completed",
-    occurredAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    status: "completed"
   });
 
-  const medsForEvent = medications.filter((med) => med.eventTriggers?.includes(trigger));
-  const createdAlerts = [];
-  for (const med of medsForEvent) {
-    const hasFinal = logs.some((log) => log.medicationId === med.id && isFinalStatus(log.status));
-    if (hasFinal) continue;
+  const data = result.data || {};
+  const missedCount = Number(data.missedCount || 0);
 
-    await addDoc(collection(db, "medicationLogs"), {
-      householdId,
-      medicationId: med.id,
-      routineEventId: eventRef.id,
-      userId: eleanorId,
-      status: "missed",
-      responseMethod: "system",
-      createdAt: serverTimestamp()
-    });
-
-    const alert = await addDoc(collection(db, "notifications"), {
-      householdId,
-      userId: eleanorId,
-      medicationId: med.id,
-      routineEventId: eventRef.id,
-      type: "missed_dose_alert",
-      message: `Eleanor did not record ${med.name} for ${formatTrigger(trigger)}. Please check in when you can.`,
-      status: "sent",
-      createdAt: serverTimestamp()
-    });
-    createdAlerts.push(alert.id);
-  }
-
-  setStatus(createdAlerts.length ? "Event completed. Missed-dose alert created." : "Event completed. No missed dose.");
+  setStatus(missedCount ? "Event completed. Missed-dose alert created." : "Event completed. No missed dose.");
 }
 
 async function simulateLeavingHome() {
   requireUser();
   eventTriggerEl.value = "leaving_home";
-  const medsForEvent = medications.filter((med) => med.eventTriggers?.includes("leaving_home"));
-  const names = medsForEvent.map((med) => `${med.name} (${med.dose})`);
-  const message = names.length
-    ? `Before leaving home, please take these medicines with you: ${names.join(", ")}.`
-    : "Before leaving home, please check whether you need to take any medicine with you.";
-
-  const eventRef = await addDoc(collection(db, "routineEvents"), {
+  const result = await simulateLeavingHomeFn({
     householdId,
-    userId: eleanorId,
-    trigger: "leaving_home",
-    status: "pending",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    userId: eleanorId
   });
 
-  await addDoc(collection(db, "notifications"), {
-    householdId,
-    userId: eleanorId,
-    routineEventId: eventRef.id,
-    type: "leaving_home_reminder",
-    message,
-    status: "sent",
-    createdAt: serverTimestamp()
-  });
-
-  setStatus(message);
+  setStatus(result.data?.message || "Leaving-home reminder created.");
   render();
 }
 
@@ -309,6 +376,13 @@ function subscribeToFirestore() {
       .sort(sortCreatedDesc);
     render();
   }, handleSnapshotError("notifications"));
+
+  onSnapshot(query(collection(db, "voiceReminders"), where("householdId", "==", householdId), limit(30)), (snapshot) => {
+    voiceReminders = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortCreatedDesc);
+    render();
+  }, handleSnapshotError("family voice reminders"));
 }
 
 function render() {
@@ -337,6 +411,7 @@ function render() {
   });
 
   renderDashboard();
+  renderVoiceReminderStatus();
 }
 
 function renderDashboard() {
@@ -371,29 +446,23 @@ function renderDashboard() {
   `;
 }
 
-function classifyResponse(text) {
-  const normalized = text.toLowerCase();
-  if (["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency"].some((term) => normalized.includes(term))) {
-    return { status: "help_requested" };
-  }
-  if (["later", "remind", "snooze", "wait"].some((term) => normalized.includes(term))) {
-    return { status: "snoozed" };
-  }
-  if (["do not want", "don't want", "refuse", "side effect", "not taking", "no"].some((term) => normalized.includes(term))) {
-    return { status: "refused", refusalReason: refusalReasonFor(normalized) };
-  }
-  if (["help", "call", "caregiver", "need someone"].some((term) => normalized.includes(term))) {
-    return { status: "help_requested" };
-  }
-  return { status: "taken" };
+function renderVoiceReminderStatus() {
+  const medicationId = selectedMedicationId || medicationForCurrentEvent()?.id;
+  const reminder = medicationId ? voiceReminderFor(medicationId, eventTriggerEl.value) : null;
+
+  if (!voiceStatusEl) return;
+  voiceStatusEl.textContent = reminder
+    ? `Family voice reminder saved: ${reminder.speakerName} (${formatTrigger(reminder.relationship)}) for ${formatTrigger(eventTriggerEl.value)}.`
+    : "No family voice reminder saved for the selected medication/event.";
 }
 
-function refusalReasonFor(text) {
-  if (text.includes("away") || text.includes("not home") || text.includes("left")) return "away_from_medicine";
-  if (text.includes("side effect") || text.includes("sick")) return "side_effects";
-  if (text.includes("unwell") || text.includes("nause") || text.includes("bad")) return "feeling_unwell";
-  if (text.includes("confus") || text.includes("not sure")) return "confused";
-  return "other";
+function voiceReminderFor(medicationId, trigger) {
+  return voiceReminders.find((reminder) =>
+    reminder.medicationId === medicationId &&
+    (reminder.routineEventTrigger === trigger || reminder.routineEventId === trigger) &&
+    reminder.consentConfirmed === true &&
+    reminder.messageType === "recorded"
+  );
 }
 
 function medicationForCurrentEvent() {
@@ -406,10 +475,6 @@ function valueOf(id) {
 
 function requireUser() {
   if (!currentUser) throw new Error("Firebase Auth is not ready");
-}
-
-function isFinalStatus(status) {
-  return ["taken", "snoozed", "missed", "refused", "help_requested"].includes(status);
 }
 
 function handleSnapshotError(label) {

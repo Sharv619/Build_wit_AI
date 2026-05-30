@@ -114,6 +114,31 @@
       </div>
 
       <div class="rounded-3xl border-2 border-[#E6E2D3] bg-surface p-6 shadow-[0_8px_30px_rgba(74,101,73,0.1)]">
+        <h2 class="text-3xl font-bold">Trusted Family Voice</h2>
+        <p class="mt-2 text-base font-bold text-on-surface-variant">Attach a recorded family reminder to the selected medication and current event.</p>
+        <div class="mt-5 grid gap-4">
+          <input id="voice-speaker" class="h-14 rounded-2xl border-2 border-outline-variant px-5 text-lg font-semibold" placeholder="Speaker name" value="Sarah" />
+          <select id="voice-relationship" class="h-14 rounded-2xl border-2 border-outline-variant bg-white px-5 text-lg font-semibold">
+            <option value="daughter">Daughter</option>
+            <option value="son">Son</option>
+            <option value="spouse">Spouse</option>
+            <option value="grandchild">Grandchild</option>
+            <option value="caregiver">Caregiver</option>
+            <option value="other">Other</option>
+          </select>
+          <input id="voice-file" type="file" accept="audio/*" class="rounded-2xl border-2 border-outline-variant bg-white px-5 py-4 text-base font-semibold" />
+          <label class="flex items-start gap-3 rounded-2xl border-2 border-outline-variant bg-white p-4 text-base font-bold">
+            <input id="voice-consent" type="checkbox" class="mt-1 h-5 w-5 rounded border-outline-variant text-primary" />
+            <span>I confirm I have permission to use this person's voice for medication reminders.</span>
+          </label>
+          <p class="rounded-2xl bg-secondary-container p-4 text-sm font-bold text-secondary">Use calm, supportive reminders only. Do not use guilt-based or manipulative language.</p>
+          <button id="save-voice-reminder" class="h-16 rounded-full border-2 border-primary px-6 text-xl font-bold text-primary">Save Family Voice Reminder</button>
+          <button id="delete-voice-reminder" class="h-14 rounded-full border-2 border-error px-6 text-lg font-bold text-error">Delete Family Voice Reminder</button>
+          <p id="voice-reminder-status" class="text-sm font-bold text-on-surface-variant">No family voice reminder saved for the selected medication/event.</p>
+        </div>
+      </div>
+
+      <div class="rounded-3xl border-2 border-[#E6E2D3] bg-surface p-6 shadow-[0_8px_30px_rgba(74,101,73,0.1)]">
         <div class="flex items-center justify-between gap-4">
           <div>
             <p class="text-sm font-bold uppercase tracking-widest text-secondary">Caregiver dashboard</p>

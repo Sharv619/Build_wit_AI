@@ -10,6 +10,12 @@ service cloud.firestore {
       return householdId == 'demo-household-eleanor';
     }
 
+    // Demo-only escape hatch for public hackathon data. Production must remove
+    // unauthenticated demo access and require explicit household membership.
+    function isDemoReadableHousehold(householdId) {
+      return isDemoHousehold(householdId);
+    }
+
     function userDoc(uid) {
       return get(/databases/$(database)/documents/users/$(uid));
     }
@@ -30,7 +36,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || signedIn() && (
         request.auth.uid == userId ||
         householdIdFor(request.auth.uid) == resource.data.householdId
       );
@@ -46,43 +52,63 @@ service cloud.firestore {
     }
 
     match /households/{householdId} {
-      allow read: if isDemoHousehold(householdId) || isLinkedToHousehold(householdId);
+      allow read: if isDemoReadableHousehold(householdId) || isLinkedToHousehold(householdId);
       allow create: if isDemoHousehold(householdId) || signedIn() && request.resource.data.createdBy == request.auth.uid;
       allow update: if isDemoHousehold(householdId) || isCaregiverFor(householdId);
       allow delete: if false;
     }
 
     match /medications/{medicationId} {
-      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
       allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
       allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
       allow delete: if false;
     }
 
     match /routineEvents/{eventId} {
-      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
-      allow update: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      // Core event completion should go through Cloud Functions. Direct client writes
+      // are limited to authenticated linked users for non-demo expansion work.
+      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      allow update: if isLinkedToHousehold(resource.data.householdId);
       allow delete: if false;
     }
 
     match /medicationLogs/{logId} {
-      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      // Medication response classification and logging are authoritative backend work.
+      allow create: if isLinkedToHousehold(request.resource.data.householdId);
       allow update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      allow create, update: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      // Alert creation should be server-owned. Client update remains for future
+      // authenticated acknowledgement flows only.
+      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      allow update: if isLinkedToHousehold(resource.data.householdId);
       allow delete: if false;
     }
 
     match /scriptUploads/{uploadId} {
-      allow read: if isDemoHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
       allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
       allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
       allow delete: if false;
+    }
+
+    match /voiceReminders/{voiceReminderId} {
+      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
+      // Demo/MVP recorded voice reminders. Production should enforce caregiver consent,
+      // household membership, file ownership, deletion audit trails, and senior opt-out.
+      allow create: if (
+        isDemoHousehold(request.resource.data.householdId) ||
+        isCaregiverFor(request.resource.data.householdId)
+      ) &&
+        request.resource.data.consentConfirmed == true &&
+        request.resource.data.messageType == 'recorded';
+      allow update: if false;
+      allow delete: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
     }
   }
 }

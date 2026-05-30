@@ -24,7 +24,7 @@ export const classifyMedicationResponse = onCall(async (request) => {
 });
 
 export const recordMedicationResponse = onCall(async (request) => {
-  const userId = actorId(request);
+  const userId = targetUserId(request);
   const householdId = stringField(request.data, "householdId");
   const medicationId = stringField(request.data, "medicationId");
   const responseMethod = enumField<ResponseMethod>(request.data, "responseMethod", ["button", "voice", "typed", "system"]);
@@ -63,7 +63,7 @@ export const recordMedicationResponse = onCall(async (request) => {
 });
 
 export const completeRoutineEvent = onCall(async (request) => {
-  const userId = actorId(request);
+  const userId = targetUserId(request);
   const householdId = stringField(request.data, "householdId");
   const trigger = enumField<MedicationEventTrigger>(request.data, "trigger", eventTriggers());
   const status = enumField<"completed" | "skipped">(request.data, "status", ["completed", "skipped"]);
@@ -93,7 +93,7 @@ export const completeRoutineEvent = onCall(async (request) => {
 });
 
 export const simulateLeavingHome = onCall(async (request) => {
-  const userId = actorId(request);
+  const userId = targetUserId(request);
   const householdId = stringField(request.data, "householdId");
   const eventRef = await db.collection("routineEvents").add({
     householdId,
@@ -206,7 +206,7 @@ export const seedDemoData = onCall(async () => {
       dose: "1 tablet",
       instructions: "Temporary medicine outside the Webster Pack.",
       source: "antibiotic",
-      eventTriggers: ["lunch", "dinner"],
+      eventTriggers: ["lunch", "dinner", "leaving_home"],
       active: true,
       createdBy: caregiverId,
     },
@@ -239,7 +239,7 @@ async function createMissedLogsForEvent(
       .get();
 
     const hasFinal = existing.docs.some((doc) => finalStatuses.includes(doc.data().status));
-    if (hasFinal) continue;
+    if (hasFinal || await hasRecentDemoFinalLog(householdId, userId, med.id)) continue;
 
     const logRef = await db.collection("medicationLogs").add({
       householdId,
@@ -301,6 +301,29 @@ function extractMedicationCandidates(text: string) {
 function actorId(request: { auth?: { uid?: string }; data: unknown }): string {
   if (request.auth?.uid) return request.auth.uid;
   return stringField(request.data, "userId");
+}
+
+function targetUserId(request: { auth?: { uid?: string }; data: unknown }): string {
+  // Demo bridge: callable functions may be invoked by an anonymous caregiver session
+  // while the medication workflow is for Eleanor. Production should enforce caregiver
+  // household membership before honoring a separate target user id.
+  return optionalString(isRecord(request.data) ? request.data.userId : undefined) ?? actorId(request);
+}
+
+async function hasRecentDemoFinalLog(householdId: string, userId: string, medicationId: string): Promise<boolean> {
+  if (householdId !== "demo-household-eleanor") return false;
+
+  const snapshot = await db.collection("medicationLogs")
+    .where("householdId", "==", householdId)
+    .where("userId", "==", userId)
+    .where("medicationId", "==", medicationId)
+    .limit(5)
+    .get();
+
+  return snapshot.docs.some((doc) => {
+    const data = doc.data();
+    return !data.routineEventId && finalStatuses.includes(data.status);
+  });
 }
 
 function stringField(data: unknown, field: string): string {

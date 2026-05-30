@@ -7,9 +7,26 @@ service firebase.storage {
     }
 
     match /scriptUploads/{householdId}/{fileName} {
-      allow read: if signedIn();
+      // Demo-only script upload path. Production should verify the signed-in user is
+      // linked to this household before allowing reads or writes.
+      allow read: if signedIn()
+        && householdId == 'demo-household-eleanor';
       allow write: if signedIn()
+        && householdId == 'demo-household-eleanor'
         && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /households/{householdId}/voiceReminders/{fileName} {
+      // Demo/MVP recorded family voice reminders only. Production should verify
+      // household membership, consent records, speaker ownership, and delete flows.
+      allow read: if signedIn()
+        && householdId == 'demo-household-eleanor';
+      allow write: if signedIn()
+        && householdId == 'demo-household-eleanor'
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if signedIn()
+        && householdId == 'demo-household-eleanor';
     }
 
     match /{allPaths=**} {
