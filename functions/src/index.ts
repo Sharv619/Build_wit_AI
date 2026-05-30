@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import textToSpeech = require("@google-cloud/text-to-speech");
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { classifyFallback, classifyWithGemini, missedDoseCopy, reminderCopy } from "./ai";
 import {
@@ -15,7 +16,10 @@ import {
 admin.initializeApp();
 
 const db = admin.firestore();
+const storage = admin.storage();
+const ttsClient = new textToSpeech.TextToSpeechClient();
 const finalStatuses: MedicationStatus[] = ["taken", "snoozed", "refused", "help_requested", "missed"];
+const defaultChirpVoice = "en-US-Chirp3-HD-Charon";
 
 export const classifyMedicationResponse = onCall(async (request) => {
   const text = stringField(request.data, "text");
@@ -139,6 +143,80 @@ export const generateMissedDoseAlert = onCall(async (request) => {
   const medicationName = stringField(request.data, "medicationName");
   const trigger = stringField(request.data, "trigger");
   return { message: missedDoseCopy(medicationName, trigger) };
+});
+
+export const generateChirpReminderAudio = onCall(async (request) => {
+  const userId = targetUserId(request);
+  const householdId = stringField(request.data, "householdId");
+  const medicationId = stringField(request.data, "medicationId");
+  const medicationName = stringField(request.data, "medicationName");
+  const dose = stringField(request.data, "dose");
+  const trigger = enumField<MedicationEventTrigger>(request.data, "trigger", eventTriggers());
+  const voiceName = optionalString(request.data.voiceName) ?? defaultChirpVoice;
+  const syntheticVoiceAcknowledged = booleanField(request.data, "syntheticVoiceAcknowledged");
+
+  if (!syntheticVoiceAcknowledged) {
+    throw new HttpsError("failed-precondition", "Synthetic voice acknowledgement is required.");
+  }
+
+  const message = reminderCopy(medicationName, dose, trigger);
+  const [response] = await ttsClient.synthesizeSpeech({
+    input: { text: message },
+    voice: {
+      languageCode: voiceName.slice(0, 5),
+      name: voiceName,
+    },
+    audioConfig: {
+      audioEncoding: "MP3",
+    },
+  });
+
+  if (!response.audioContent) {
+    throw new HttpsError("internal", "Text-to-Speech returned no audio content.");
+  }
+
+  const voiceReminderRef = db.collection("voiceReminders").doc();
+  const storagePath = `households/${householdId}/voiceReminders/${voiceReminderRef.id}.mp3`;
+  const file = storage.bucket().file(storagePath);
+
+  await file.save(Buffer.from(response.audioContent as Uint8Array), {
+    contentType: "audio/mpeg",
+    metadata: {
+      metadata: {
+        householdId,
+        medicationId,
+        routineEventTrigger: trigger,
+        messageType: "chirp3_hd",
+        voiceName,
+      },
+    },
+  });
+
+  await voiceReminderRef.set({
+    userId,
+    householdId,
+    medicationId,
+    routineEventId: trigger,
+    routineEventTrigger: trigger,
+    speakerName: "Pilly Chirp voice",
+    relationship: "app_voice",
+    storagePath,
+    consentConfirmed: false,
+    syntheticVoiceAcknowledged: true,
+    messageType: "chirp3_hd",
+    ttsProvider: "google_cloud_text_to_speech",
+    voiceName,
+    reminderText: message,
+    createdAt: now(),
+  });
+
+  return {
+    voiceReminderId: voiceReminderRef.id,
+    storagePath,
+    messageType: "chirp3_hd",
+    voiceName,
+    message,
+  };
 });
 
 export const processScriptUpload = onCall(async (request) => {
@@ -343,6 +421,13 @@ function enumField<T extends string>(data: unknown, field: string, allowed: read
     throw new HttpsError("invalid-argument", `Invalid ${field}: ${value}`);
   }
   return value as T;
+}
+
+function booleanField(data: unknown, field: string): boolean {
+  if (!isRecord(data) || typeof data[field] !== "boolean") {
+    throw new HttpsError("invalid-argument", `Missing required boolean field: ${field}`);
+  }
+  return data[field];
 }
 
 function normalizeStatus(status: MedicationStatus | undefined, intent: string): MedicationStatus {

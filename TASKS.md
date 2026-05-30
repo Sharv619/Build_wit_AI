@@ -23,6 +23,7 @@
 - [x] Store recorded family voice reminder audio in Firebase Storage.
 - [x] Store family voice reminder metadata in Firestore `voiceReminders`.
 - [x] Add browser recording controls for family voice reminders.
+- [x] Add optional backend Google Chirp 3 HD app-voice reminder generation.
 - [x] Require a visible consent checkbox before uploading a family voice reminder.
 - [x] Prefer a matching family voice reminder when the senior selects `Play Reminder`.
 - [x] Fall back to browser speech synthesis when no family recording exists.
@@ -63,6 +64,7 @@
 - [ ] Add senior opt-out controls for familiar voice reminders.
 - [ ] Review family voice reminder scripts for manipulation, guilt language, and medical advice boundaries.
 - [ ] Evaluate consent-based custom voice or Google Chirp roadmap only after safety and opt-out design is complete.
+- [ ] Add UI controls and tests for Chirp 3 generated reminders if keeping paid Cloud Functions enabled.
 - [ ] Add privacy review, audit logging, and retention policy before handling real patient or prescription data.
 
 ## Safety Boundary

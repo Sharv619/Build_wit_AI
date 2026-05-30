@@ -688,11 +688,12 @@ function renderVoiceReminderStatus() {
 }
 
 function voiceReminderFor(medicationId, trigger) {
+  const playableMessageTypes = ["recorded", "chirp3_hd"];
   return voiceReminders.find((reminder) =>
     reminder.medicationId === medicationId &&
     (reminder.routineEventTrigger === trigger || reminder.routineEventId === trigger) &&
-    reminder.consentConfirmed === true &&
-    reminder.messageType === "recorded"
+    (reminder.consentConfirmed === true || reminder.syntheticVoiceAcknowledged === true) &&
+    playableMessageTypes.includes(reminder.messageType)
   );
 }
 

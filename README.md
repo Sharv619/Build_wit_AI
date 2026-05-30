@@ -107,7 +107,17 @@ The record/upload flow requires the caregiver to confirm: "I confirm I have perm
 
 Allowed example: "Hi Dad, it's time for your evening medication. Please take it with water."
 
-Future custom voice work, such as consent-based Google Chirp or similar voice generation, is roadmap-only and is not implemented in this repository.
+The backend also includes an optional Google Cloud Text-to-Speech Chirp 3 HD callable for generating a generic app-voice reminder from approved reminder text. This is not family voice cloning. The function stores generated MP3 audio in Firebase Storage and metadata in `voiceReminders` with `messageType: "chirp3_hd"`.
+
+For local development with Google Cloud Text-to-Speech, use Application Default Credentials:
+
+```bash
+gcloud auth application-default login
+```
+
+For deployed Firebase Functions, attach permissions to the runtime service account rather than committing a service-account JSON file. The service account needs access to Cloud Text-to-Speech and the Firebase Storage bucket.
+
+Future custom family voice work, such as consent-based Chirp 3 Instant Custom Voice, is roadmap-only and requires allow-list access, explicit speaker consent, opt-out controls, and production safety review.
 
 ## Screenshots
 

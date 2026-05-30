@@ -87,6 +87,34 @@ Request:
 }
 ```
 
+### `generateChirpReminderAudio`
+Generates a generic Google Cloud Text-to-Speech Chirp 3 HD reminder from approved backend reminder copy, saves MP3 audio to Firebase Storage, and stores `voiceReminders` metadata. This is not family voice cloning.
+
+Request:
+```json
+{
+  "userId": "demo-eleanor",
+  "householdId": "demo-household-eleanor",
+  "medicationId": "MEDICATION_DOC_ID",
+  "medicationName": "Post-hospital antibiotic",
+  "dose": "1 tablet",
+  "trigger": "lunch",
+  "voiceName": "en-US-Chirp3-HD-Charon",
+  "syntheticVoiceAcknowledged": true
+}
+```
+
+Response:
+```json
+{
+  "voiceReminderId": "VOICE_REMINDER_DOC_ID",
+  "storagePath": "households/demo-household-eleanor/voiceReminders/VOICE_REMINDER_DOC_ID.mp3",
+  "messageType": "chirp3_hd",
+  "voiceName": "en-US-Chirp3-HD-Charon",
+  "message": "It is lunch. Please take 1 tablet of Post-hospital antibiotic if this matches your doctor's or pharmacist's instructions."
+}
+```
+
 ### `processScriptUpload`
 Request:
 ```json
