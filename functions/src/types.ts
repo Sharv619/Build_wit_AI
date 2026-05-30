@@ -1,0 +1,92 @@
+export type MedicationStatus =
+  | "pending"
+  | "taken"
+  | "snoozed"
+  | "missed"
+  | "refused"
+  | "help_requested";
+
+export type ResponseMethod = "button" | "voice" | "typed" | "system";
+
+export type UserRole = "senior" | "spouse" | "caregiver" | "family";
+
+export type MedicationSource =
+  | "webster_pack"
+  | "temporary_post_hospital"
+  | "antibiotic"
+  | "other";
+
+export type MedicationEventTrigger =
+  | "breakfast"
+  | "lunch"
+  | "dinner"
+  | "bedtime"
+  | "leaving_home"
+  | "post_discharge"
+  | "caregiver_check_in";
+
+export type RefusalReason =
+  | "away_from_medicine"
+  | "side_effects"
+  | "feeling_unwell"
+  | "confused"
+  | "other";
+
+export type Intent =
+  | "taken"
+  | "snoozed"
+  | "refused"
+  | "help_requested"
+  | "caregiver_attention"
+  | "urgent";
+
+export interface Medication {
+  householdId: string;
+  userId: string;
+  name: string;
+  dose: string;
+  instructions: string;
+  source: MedicationSource;
+  eventTriggers: MedicationEventTrigger[];
+  active: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoutineEvent {
+  householdId: string;
+  userId: string;
+  trigger: MedicationEventTrigger;
+  status: "pending" | "completed" | "skipped";
+  occurredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MedicationLog {
+  householdId: string;
+  medicationId: string;
+  routineEventId?: string;
+  userId: string;
+  status: MedicationStatus;
+  responseMethod: ResponseMethod;
+  responseText?: string;
+  refusalReason?: RefusalReason;
+  refusalNote?: string;
+  createdAt: string;
+}
+
+export interface NotificationEvent {
+  householdId: string;
+  userId: string;
+  caregiverId?: string;
+  medicationId?: string;
+  routineEventId?: string;
+  type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
+  message: string;
+  status: "pending" | "sent" | "acknowledged";
+  createdAt: string;
+  acknowledgedAt?: string;
+}
+

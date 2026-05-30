@@ -1,113 +1,67 @@
 # MediMate Voice PDD
 
 ## Product Design Direction
-MediMate Voice should feel calm, practical, and easy to operate on a phone. The senior experience should prioritize clarity and confidence over density. The caregiver experience can show more information, but should remain scan-friendly and focused on medication setup, medication status, missed-dose risk, and refusal context.
+MediMate Voice should feel calm, practical, and easy to operate when the Stitch frontend is added. The backend should provide clean state and copy so the frontend can focus on simple senior and caregiver experiences instead of duplicating medication logic.
 
 ## Design Principles
-- Mobile first.
-- High contrast.
-- Large tap targets.
-- Short labels.
-- Clear status language.
-- Minimal navigation depth.
+- Backend-first; Stitch frontend later.
+- Event-based reminders instead of time-window-first scheduling.
+- High contrast, large tap targets, and short labels in frontend implementations.
+- Clear status language for caregivers.
 - No medical advice beyond fixed safety messaging.
+- Safety-sensitive logic runs through backend functions.
 
-## Information Architecture
-- Auth
-- Senior Home
-- Caregiver Dashboard
-- Medication Setup
-- Script Upload
-- History
-- Settings
+## Information Architecture For Stitch
+- Auth entry using Firebase Auth.
+- Senior home reading current event reminders.
+- Caregiver dashboard reading household status, logs, and notifications.
+- Medication setup writing caregiver-confirmed medicines and event triggers.
+- Script upload or pasted script intake.
+- History based on medication logs.
+- Settings for senior, caregiver, voice preference, and reminder placeholders.
 
-## Senior Home UX
-The senior home is the main demo screen. It should show:
-- Next medication name.
-- Dose required.
-- Scheduled time.
+## Senior Home UX Contract
+The backend should provide enough data for Stitch to show:
+- Current routine event context, such as breakfast, lunch, bedtime, or leaving home.
+- Medication name and dose.
+- Whether the medicine is part of the Webster Pack or outside it.
 - Simple instructions.
-- Whether the medicine is part of the Webster Pack or an extra medicine outside the pack.
 - Safety disclaimer.
-- Speaker playback control.
-- Voice input control when supported.
-- Typed fallback input.
-- Large action buttons:
-  - I took it
-  - Remind me later
-  - I don't want to take it
-  - I need help
+- Reminder copy from backend.
+- Large response actions: I took it, Remind me later, I don't want to take it, I need help.
 
-If the senior selects I don't want to take it, the app should ask for a simple reason:
-- I am away from it
-- I am worried about side effects
-- I feel unwell
-- I am confused
-- Other
+If the senior refuses, Stitch should call the backend with one of:
+- I am away from it.
+- I am worried about side effects.
+- I feel unwell.
+- I am confused.
+- Other.
 
-## Caregiver Dashboard UX
-The caregiver dashboard should show:
-- Today's medication list.
-- Medicine source: Webster Pack or extra medicine.
-- Current status labels:
-  - Pending
-  - Taken
-  - Snoozed
-  - Missed
-  - Refused
-  - Help Requested
-- Refusal reason when available.
-- Missed-dose alert copy when relevant.
-- A demo control to simulate a missed medication.
-- A demo control to simulate leaving home.
+## Caregiver Dashboard UX Contract
+The backend should provide:
+- Household medication list by routine event.
+- Status labels: Pending, Taken, Snoozed, Missed, Refused, Help Requested.
+- Medication source: Webster Pack or extra medicine.
+- Latest response text and refusal reason when available.
+- Missed-dose alert notifications.
+- Demo controls for completing routine events and simulating leaving home.
 
-## Medication Setup UX
-Medication setup should allow a demo user to add:
+## Medication Setup UX Contract
+Stitch should let caregivers confirm:
 - Medication name.
 - Dose.
-- Scheduled time.
-- Allowed time window.
 - Instructions.
-- Source:
-  - Webster Pack
-  - Temporary post-hospital medicine
-  - Antibiotic
-  - Other
-- Optional relationship to the active senior user.
+- Source: Webster Pack, temporary post-hospital medicine, antibiotic, or other.
+- Event triggers: breakfast, lunch, dinner, bedtime, leaving home, post-discharge, or caregiver check-in.
 
-## Script Upload UX
-Script upload should be designed as a caregiver/family flow. For the prototype, upload can be a placeholder that extracts or pre-fills medication fields from typed script text or a selected file. The UI should make clear that the caregiver confirms entries before they become reminders.
+## Script Upload UX Contract
+Script upload should be a caregiver/family flow. The backend may return extracted candidate medicines, but Stitch must ask the caregiver to confirm entries before creating medication records.
 
-## Leaving-Home Reminder UX
-Leaving-home reminders should be presented as a gentle prompt:
-- Show which medicines should be taken along.
-- Provide a large confirmation button.
-- Let the caregiver dashboard display that the reminder was sent.
-- In the prototype, this can be simulated rather than using real geofencing.
-
-## History UX
-History should summarize the last seven days:
-- Taken count.
-- Missed count.
-- Snoozed count.
-- Adherence percentage.
-
-## Settings UX
-Settings should include:
-- Senior name.
-- Caregiver name.
-- Caregiver contact.
-- Voice preference.
-- Familiar voice placeholder for family-recorded reminders.
-- Reminder tone placeholder.
-- Factory reset with confirmation.
-
-## Visual Style
-- Use a restrained healthcare-oriented palette with strong contrast.
-- Avoid decorative clutter.
-- Prefer simple panels, clear section headings, and consistent spacing.
-- Buttons should be easy to hit on mobile.
-- Statuses should use both text and color; color must not be the only signal.
+## Leaving-Home Reminder UX Contract
+Leaving home is an event trigger. For v1, Stitch can call `simulateLeavingHome` and show:
+- Medicines to take along.
+- A large confirmation action.
+- Caregiver-visible reminder notification.
 
 ## Accessibility Requirements
 - Buttons must have accessible labels.

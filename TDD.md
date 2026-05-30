@@ -1,27 +1,29 @@
 # MediMate Voice TDD
 
 ## Technical Overview
-MediMate Voice will be implemented as a React + Vite + TypeScript browser app. The prototype stores data in `localStorage` and optionally calls Gemini from the browser for intent classification and friendly generated copy.
+MediMate Voice will be implemented backend-first on Firebase. The Stitch frontend will be added later and should consume Firebase Auth, Firestore, Storage, and Cloud Functions rather than owning medication business logic.
+
+The backend owns event-based medication reminders, medication response logging, caregiver alerts, script upload processing, Gemini integration, deterministic AI fallback, and safety enforcement.
 
 ## Stack
-- React
-- Vite
-- TypeScript
-- Browser `localStorage`
-- Browser `speechSynthesis`
-- Browser Speech Recognition API where available
-- Optional Gemini API through `VITE_GEMINI_API_KEY`
+- Firebase Auth for future senior/caregiver identity.
+- Firestore for users, households, medications, routine events, logs, notifications, and script upload metadata.
+- Firebase Storage for prescription/script files in future versions.
+- Cloud Functions for AI, event completion, missed-dose transitions, caregiver alert generation, and script processing.
+- Gemini API called server-side from Cloud Functions.
 
 ## Environment Variables
-- `VITE_GEMINI_API_KEY`: optional API key for Gemini demo calls.
+- `GEMINI_API_KEY`: optional server-side Gemini key for Cloud Functions.
+- `FIREBASE_PROJECT_ID`: Firebase project identifier.
 
-## Local Storage Keys
-- `medimate.users`
-- `medimate.activeUserId`
-- `medimate.medications`
-- `medimate.logs`
-- `medimate.settings`
-- `medimate.notifications`
+## Firestore Collections
+- `users/{userId}`: senior, spouse, caregiver, or family profile.
+- `households/{householdId}`: links David, Rose, and family caregivers.
+- `medications/{medicationId}`: medicine details, dose, source, active state, and event triggers.
+- `routineEvents/{eventId}`: event instances such as breakfast, lunch, dinner, bedtime, leaving home, post-discharge, or caregiver check-in.
+- `medicationLogs/{logId}`: taken, snoozed, missed, refused, or help-requested records.
+- `notifications/{notificationId}`: caregiver alerts and senior reminder events.
+- `scriptUploads/{uploadId}`: uploaded script metadata, extracted candidates, and confirmation state.
 
 ## Shared Types
 ```ts
@@ -35,13 +37,22 @@ type MedicationStatus =
 
 type ResponseMethod = "button" | "voice" | "typed" | "system";
 
-type UserRole = "senior" | "caregiver";
+type UserRole = "senior" | "spouse" | "caregiver" | "family";
 
 type MedicationSource =
   | "webster_pack"
   | "temporary_post_hospital"
   | "antibiotic"
   | "other";
+
+type MedicationEventTrigger =
+  | "breakfast"
+  | "lunch"
+  | "dinner"
+  | "bedtime"
+  | "leaving_home"
+  | "post_discharge"
+  | "caregiver_check_in";
 
 type RefusalReason =
   | "away_from_medicine"
@@ -50,28 +61,36 @@ type RefusalReason =
   | "confused"
   | "other";
 
-interface User {
-  id: string;
-  name: string;
-  role: UserRole;
-  caregiverContact?: string;
-}
-
 interface Medication {
   id: string;
+  householdId: string;
   userId: string;
   name: string;
   dose: string;
-  scheduledTime: string;
-  allowedWindowMinutes: number;
   instructions: string;
   source: MedicationSource;
+  eventTriggers: MedicationEventTrigger[];
   active: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RoutineEvent {
+  id: string;
+  householdId: string;
+  userId: string;
+  trigger: MedicationEventTrigger;
+  status: "pending" | "completed" | "skipped";
+  occurredAt?: string;
+  createdAt: string;
 }
 
 interface MedicationLog {
   id: string;
+  householdId: string;
   medicationId: string;
+  routineEventId?: string;
   userId: string;
   status: MedicationStatus;
   responseMethod: ResponseMethod;
@@ -83,72 +102,50 @@ interface MedicationLog {
 
 interface NotificationEvent {
   id: string;
+  householdId: string;
   userId: string;
+  caregiverId?: string;
   medicationId?: string;
+  routineEventId?: string;
   type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
   message: string;
+  status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;
 }
 ```
 
-## Suggested Modules
-- `src/types.ts`: shared domain types.
-- `src/services/storage.ts`: localStorage read/write helpers.
-- `src/services/ai.ts`: Gemini calls and deterministic fallback.
-- `src/services/voice.ts`: speech synthesis and speech recognition helpers.
-- `src/services/notifications.ts`: missed-dose window checks and leaving-home reminder simulation.
-- `src/App.tsx`: route/view state and top-level layout.
-- `src/components/*`: screen and UI components.
+## Cloud Functions Contract
+- `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, caregiver attention, or urgent.
+- `recordMedicationResponse`: validates and writes medication logs, including refusal reasons.
+- `completeRoutineEvent`: marks an event complete or skipped and creates missed-dose alerts when relevant medicines have no final response.
+- `simulateLeavingHome`: creates a leaving-home routine event and reminder notification.
+- `generateReminderCopy`: creates short friendly reminder text without medical advice.
+- `generateMissedDoseAlert`: creates caregiver alert copy for missed event-based doses.
+- `processScriptUpload`: extracts candidate medicines from pasted script text or uploaded file metadata for caregiver confirmation.
 
-## Gemini Behavior
-The AI service should support:
-- Classifying user responses into:
-  - `taken`
-  - `snoozed`
-  - `refused`
-  - `help_requested`
-  - `caregiver_attention`
-  - `urgent`
-- Generating friendly reminder copy.
-- Generating caregiver missed-dose alert copy.
-- Summarizing refusal context without giving medical advice.
+## AI and Safety Behavior
+- Gemini calls run only in Cloud Functions, never directly in the Stitch frontend.
+- If Gemini is unavailable, deterministic keyword fallback must classify responses.
+- Urgent phrases such as chest pain, cannot breathe, fell, dizzy, or emergency must return static emergency guidance and log `help_requested`.
+- Backend-generated text must never provide dosage, diagnosis, skip-dose, or extra-dose advice.
 
-If the key is missing or the API fails, the service must use deterministic keyword fallback.
+## Event-Based Missed-Dose Logic
+- A medication is due because one of its event triggers occurs.
+- A dose is missed when the related routine event is completed or skipped and the medication has no final log of taken, snoozed, refused, or help requested.
+- Leaving home is a first-class event trigger and can be simulated in v1.
+- Clock-based schedules may be added later as optional metadata, but they are not the v1 reminder model.
 
-## Fallback Classification
-Example deterministic rules:
-- `taken`: took, done, yes, completed, had it
-- `snoozed`: later, remind, snooze, wait
-- `refused`: do not want, don't want, refuse, side effects, not taking
-- `urgent`: chest pain, cannot breathe, fell, dizzy, emergency
-- `help_requested`: help, call, caregiver, need someone
-- Default: `caregiver_attention`
-
-Urgent intent should be handled with static emergency copy and logged as `help_requested`.
-
-## Missed-Dose Logic
-- Each medication has an `allowedWindowMinutes` value.
-- A pending dose becomes missed only after scheduled time plus allowed window.
-- When a dose becomes missed, create a caregiver-facing `missed_dose_alert` notification.
-- The prototype may include a simulate missed dose control to trigger this path for demo purposes.
-
-## Leaving-Home Logic
-- The first prototype may simulate leaving home with a button rather than using real geolocation.
-- When leaving home is simulated, the app checks for active medicines due soon or not yet taken.
-- It creates a `leaving_home_reminder` notification and shows David which medicines to take along.
-- Real geofencing and background notifications are future work.
-
-## Safety Constraints
-The app must not generate or display dosage, diagnosis, skip-dose, or extra-dose advice. All generated copy should be reminder-oriented and include no medical decisioning.
+## Stitch Frontend Contract
+- Stitch should read/write safe Firestore documents and call Cloud Functions for business logic.
+- Stitch should not call Gemini directly.
+- Stitch should display backend-returned reminder, alert, refusal, and event status data.
+- Stitch should use Firebase SDK configuration supplied by the backend project.
 
 ## Testing
-- Run TypeScript build.
-- Verify app works without `VITE_GEMINI_API_KEY`.
-- Verify typed response fallback.
-- Verify voice playback in a supported browser.
-- Verify refusal reason capture.
-- Verify missed-dose alert fires only after the configured window.
-- Verify leaving-home reminder simulation.
-- Verify local reset clears all MediMate storage keys.
-- Verify mobile viewport has no overlapping controls.
+- Verify Firestore security rules restrict household data to linked users.
+- Verify Cloud Functions write expected logs and notifications.
+- Verify event completion creates missed-dose alerts only for medicines tied to that event.
+- Verify leaving-home simulation creates a reminder notification.
+- Verify Gemini fallback works without `GEMINI_API_KEY`.
+- Verify urgent phrases produce static emergency guidance and no medical advice.

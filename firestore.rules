@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function householdIdFor(uid) {
+      return userDoc(uid).data.householdId;
+    }
+
+    function isLinkedToHousehold(householdId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        householdIdFor(request.auth.uid) == householdId;
+    }
+
+    function isCaregiverFor(householdId) {
+      return isLinkedToHousehold(householdId) &&
+        userDoc(request.auth.uid).data.role in ['caregiver', 'family'];
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        request.auth.uid == userId ||
+        householdIdFor(request.auth.uid) == resource.data.householdId
+      );
+      allow create, update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /households/{householdId} {
+      allow read: if isLinkedToHousehold(householdId);
+      allow write: if isCaregiverFor(householdId);
+    }
+
+    match /medications/{medicationId} {
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create: if isCaregiverFor(request.resource.data.householdId);
+      allow update: if isCaregiverFor(resource.data.householdId);
+      allow delete: if false;
+    }
+
+    match /routineEvents/{eventId} {
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      allow update: if isLinkedToHousehold(resource.data.householdId);
+      allow delete: if false;
+    }
+
+    match /medicationLogs/{logId} {
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create: if isLinkedToHousehold(request.resource.data.householdId);
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, update: if isLinkedToHousehold(request.resource.data.householdId);
+      allow delete: if false;
+    }
+
+    match /scriptUploads/{uploadId} {
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create: if isCaregiverFor(request.resource.data.householdId);
+      allow update: if isCaregiverFor(resource.data.householdId);
+      allow delete: if false;
+    }
+  }
+}
+

@@ -1,42 +1,30 @@
 # MediMate Voice Skills
 
 ## Product Skills
-- Translate assistive health needs into a simple demo workflow.
-- Keep senior-facing UX accessible and low-friction.
-- Separate caregiver visibility from senior action flow.
-- Define safety boundaries for non-medical advice software.
+- Translate assistive health needs into backend-supported medication workflows.
 - Model real medication complexity around Webster Packs, post-hospital medicines, antibiotics, and temporary prescriptions.
-- Capture medication refusal context without turning the app into a medical advice tool.
+- Separate senior action flow from caregiver visibility.
+- Capture medication refusal context without turning the product into a medical advice tool.
+- Define safety boundaries for AI-assisted health software.
 
-## Design Skills
-- Mobile-first UI design.
-- High-contrast accessible visual design.
-- Large tap-target interaction design.
-- Status-driven dashboard design.
-- Form design for simple medication setup.
-- Script upload and caregiver confirmation flow design.
-- Refusal reason flow design for seniors.
-- Leaving-home reminder interaction design.
+## Backend Skills
+- Firebase project setup.
+- Firebase Auth-ready user modeling.
+- Firestore collection and document modeling.
+- Firestore security rules.
+- Firebase Storage rules for script uploads.
+- Cloud Functions implementation.
+- Emulator-based backend testing.
 
-## Frontend Skills
-- React component architecture.
-- Vite project setup.
-- TypeScript domain modeling.
-- Local state and view-state management.
-- Responsive CSS.
-- Browser API integration.
-- Missed-dose time window modeling.
-- Notification event modeling.
-
-## Browser API Skills
-- `localStorage` persistence.
-- `speechSynthesis` voice playback.
-- Speech Recognition feature detection.
-- Typed fallback handling for unsupported browsers.
-- Leaving-home simulation for prototype demos.
+## Event Modeling Skills
+- Event-trigger medication modeling.
+- Routine event completion and skipped-event handling.
+- Leaving-home event simulation.
+- Missed-dose notification generation from event state.
+- Household-level medication state aggregation.
 
 ## AI Integration Skills
-- Gemini API integration from a Vite browser app.
+- Server-side Gemini integration from Cloud Functions.
 - Intent classification.
 - Friendly reminder copy generation.
 - Caregiver alert copy generation.
@@ -44,15 +32,23 @@
 - Script text extraction support for medication setup.
 - Deterministic fallback behavior when API access is unavailable.
 
+## Frontend Contract Skills
+- Firebase SDK integration guidance for Stitch.
+- Callable Cloud Function request and response design.
+- Firestore read model design for senior and caregiver screens.
+- Accessible senior UX requirements for future frontend implementation.
+
 ## Safety Skills
 - Urgent phrase detection.
 - Static emergency response handling.
 - Avoiding diagnosis or dosage recommendations.
+- Backend-enforced no-medical-advice rules.
 - Maintaining clear medical disclaimer language.
 
 ## Testing Skills
-- TypeScript build verification.
-- Manual mobile viewport testing.
-- Voice capability fallback testing.
-- Local storage reset verification.
+- Firebase emulator testing.
+- Firestore security rule verification.
+- Cloud Function behavior testing.
+- Event-based missed-dose verification.
+- Voice capability and typed fallback contract testing for future frontend.
 - Demo workflow validation.
