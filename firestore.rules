@@ -7,7 +7,7 @@ service cloud.firestore {
     }
 
     function isDemoHousehold(householdId) {
-      return householdId == 'demo-household-david-rose';
+      return householdId == 'demo-household-eleanor';
     }
 
     function userDoc(uid) {
@@ -30,15 +30,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
+      allow read: if resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
         request.auth.uid == userId ||
         householdIdFor(request.auth.uid) == resource.data.householdId
       );
-      allow create: if request.resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
+      allow create: if request.resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
         request.auth.uid == userId ||
         isCaregiverFor(request.resource.data.householdId)
       );
-      allow update: if resource.data.householdId == 'demo-household-david-rose' || signedIn() && (
+      allow update: if resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
         request.auth.uid == userId ||
         isCaregiverFor(resource.data.householdId)
       );

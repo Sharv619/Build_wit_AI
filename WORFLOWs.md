@@ -1,12 +1,12 @@
-# MediMate Voice Workflows
+# Pilly Workflows
 
 ## Backend Demo Workflow
-1. Seed David, Rose, and a linked family caregiver in Firebase.
-2. Add David's Webster Pack medicines and one post-hospital antibiotic outside the Webster Pack.
+1. Seed Eleanor, , and a linked family caregiver in Firebase.
+2. Add Eleanor's Webster Pack medicines and one post-hospital antibiotic outside the Webster Pack.
 3. Assign the antibiotic to an event trigger such as lunch or post-discharge.
 4. Stitch calls `completeRoutineEvent` or a demo trigger to make the event active.
 5. Stitch displays backend reminder copy, medicine name, dose, and source.
-6. David responds by button, voice, or typed input.
+6. Eleanor responds by button, voice, or typed input.
 7. Stitch calls `recordMedicationResponse`.
 8. Backend writes the medication log and updates caregiver-visible status.
 9. Caregiver dashboard reads the updated log and notification records.
@@ -48,7 +48,7 @@
 2. Backend creates a leaving-home routine event.
 3. Backend checks medicines linked to leaving home or still needing attention.
 4. Backend creates a reminder notification.
-5. Stitch shows David which medicines to take along.
+5. Stitch shows Eleanor which medicines to take along.
 6. Caregiver dashboard can show that the reminder was sent.
 
 ## Snooze Workflow
@@ -72,5 +72,5 @@
 
 ## Factory Reset Workflow
 1. Admin or demo operator triggers reset in the backend environment.
-2. Backend clears demo Firestore records for the MediMate project.
-3. Backend reseeds David, Rose, caregiver, sample medicines, and event triggers.
+2. Backend clears demo Firestore records for the Pilly project.
+3. Backend reseeds Eleanor, , caregiver, sample medicines, and event triggers.

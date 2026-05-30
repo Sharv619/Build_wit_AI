@@ -14,10 +14,9 @@ import {
   where
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-const firebaseConfig = window.MEDIMATE_FIREBASE_CONFIG;
-const householdId = "demo-household-david-rose";
-const davidId = "demo-david";
-const roseId = "demo-rose";
+const firebaseConfig = window.PILLY_FIREBASE_CONFIG;
+const householdId = "demo-household-eleanor";
+const eleanorId = "demo-eleanor";
 const fallbackCaregiverId = "demo-browser-caregiver";
 
 if (!firebaseConfig || firebaseConfig.apiKey.includes("REPLACE_WITH")) {
@@ -81,26 +80,18 @@ async function ensureCaregiverProfile(uid) {
 async function seedDemoData() {
   requireUser();
   await setDoc(doc(db, "households", householdId), {
-    name: "David and Rose",
-    primarySeniorId: davidId,
+    name: "Eleanor",
+    primarySeniorId: eleanorId,
     createdBy: currentUser.uid,
     updatedAt: serverTimestamp(),
     createdAt: serverTimestamp()
   }, { merge: true });
 
-  await setDoc(doc(db, "users", davidId), {
+  await setDoc(doc(db, "users", eleanorId), {
     householdId,
-    name: "David",
+    name: "Eleanor",
     age: 86,
     role: "senior",
-    createdAt: serverTimestamp()
-  }, { merge: true });
-
-  await setDoc(doc(db, "users", roseId), {
-    householdId,
-    name: "Rose",
-    age: 82,
-    role: "spouse",
     createdAt: serverTimestamp()
   }, { merge: true });
 
@@ -140,7 +131,7 @@ async function saveMedication() {
 async function addMedication(data) {
   return addDoc(collection(db, "medications"), {
     householdId,
-    userId: davidId,
+    userId: eleanorId,
     ...data,
     active: true,
     createdBy: currentUser.uid,
@@ -162,7 +153,7 @@ async function recordResponse() {
   await addDoc(collection(db, "medicationLogs"), {
     householdId,
     medicationId,
-    userId: davidId,
+    userId: eleanorId,
     status: classified.status,
     responseMethod: "typed",
     responseText,
@@ -185,7 +176,7 @@ function playReminder() {
     return;
   }
 
-  const message = `David, it is ${formatTrigger(eventTriggerEl.value)}. Please take ${medication.dose} of ${medication.name} if this matches your doctor's or pharmacist's instructions.`;
+  const message = `Eleanor, it is ${formatTrigger(eventTriggerEl.value)}. Please take ${medication.dose} of ${medication.name} if this matches your doctor's or pharmacist's instructions.`;
   speak(message);
   setStatus("Playing voice reminder.");
 }
@@ -226,7 +217,7 @@ async function completeEvent() {
   const trigger = eventTriggerEl.value;
   const eventRef = await addDoc(collection(db, "routineEvents"), {
     householdId,
-    userId: davidId,
+    userId: eleanorId,
     trigger,
     status: "completed",
     occurredAt: serverTimestamp(),
@@ -244,7 +235,7 @@ async function completeEvent() {
       householdId,
       medicationId: med.id,
       routineEventId: eventRef.id,
-      userId: davidId,
+      userId: eleanorId,
       status: "missed",
       responseMethod: "system",
       createdAt: serverTimestamp()
@@ -252,11 +243,11 @@ async function completeEvent() {
 
     const alert = await addDoc(collection(db, "notifications"), {
       householdId,
-      userId: davidId,
+      userId: eleanorId,
       medicationId: med.id,
       routineEventId: eventRef.id,
       type: "missed_dose_alert",
-      message: `David did not record ${med.name} for ${formatTrigger(trigger)}. Please check in when you can.`,
+      message: `Eleanor did not record ${med.name} for ${formatTrigger(trigger)}. Please check in when you can.`,
       status: "sent",
       createdAt: serverTimestamp()
     });
@@ -277,7 +268,7 @@ async function simulateLeavingHome() {
 
   const eventRef = await addDoc(collection(db, "routineEvents"), {
     householdId,
-    userId: davidId,
+    userId: eleanorId,
     trigger: "leaving_home",
     status: "pending",
     createdAt: serverTimestamp(),
@@ -286,7 +277,7 @@ async function simulateLeavingHome() {
 
   await addDoc(collection(db, "notifications"), {
     householdId,
-    userId: davidId,
+    userId: eleanorId,
     routineEventId: eventRef.id,
     type: "leaving_home_reminder",
     message,

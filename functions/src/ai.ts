@@ -101,7 +101,7 @@ export function reminderCopy(name: string, dose: string, trigger: string): strin
 }
 
 export function missedDoseCopy(name: string, trigger: string): string {
-  return `David did not record ${name} for ${formatTrigger(trigger)}. Please check in when you can.`;
+  return `Eleanor did not record ${name} for ${formatTrigger(trigger)}. Please check in when you can.`;
 }
 
 function termMatch(text: string, terms: string[]): boolean {
@@ -122,13 +122,13 @@ function refusalReasonFallback(text: string): RefusalReason {
 
 function safeMessageForIntent(intent: Intent): string {
   if (intent === "urgent") {
-    return "This may be urgent. Call emergency services now if David is in immediate danger. MediMate Voice does not provide medical advice.";
+    return "This may be urgent. Call emergency services now if Eleanor is in immediate danger. Pilly does not provide medical advice.";
   }
   if (intent === "refused") {
-    return "I have recorded that David does not want to take this medicine. Please contact a caregiver, doctor, or pharmacist for guidance.";
+    return "I have recorded that Eleanor does not want to take this medicine. Please contact a caregiver, doctor, or pharmacist for guidance.";
   }
   if (intent === "help_requested") {
-    return "I have recorded that David needs help and the caregiver dashboard should show this.";
+    return "I have recorded that Eleanor needs help and the caregiver dashboard should show this.";
   }
   return "Response recorded.";
 }

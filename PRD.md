@@ -1,7 +1,7 @@
-# MediMate Voice PRD
+# Pilly PRD
 
 ## Product Summary
-MediMate Voice is a backend-first medication support prototype for seniors and caregivers. The backend helps caregivers add medicines, reminds seniors around familiar daily events, records whether medicine was taken, missed, snoozed, refused, or help was requested, and alerts caregivers when event-based medication support is needed.
+Pilly is a backend-first medication support prototype for seniors and caregivers. The backend helps caregivers add medicines, reminds seniors around familiar daily events, records whether medicine was taken, missed, snoozed, refused, or help was requested, and alerts caregivers when event-based medication support is needed.
 
 The frontend will be built separately in Stitch and connected later through Firebase SDK and Cloud Functions.
 
@@ -9,7 +9,7 @@ The frontend will be built separately in Stitch and connected later through Fire
 Seniors often struggle to manage medication plans that change after hospitalisation. Webster Packs help with stable daily medicines, but they do not cover short-term antibiotics, new temporary prescriptions, or medicines that must remain outside the pack. Complex medication apps can be hard for older adults with declining memory. Families need a simple backend-supported system that can power reminders, medication logs, refusal capture, and caregiver alerts.
 
 ## Primary Persona
-David is 86 and lives with his wife Rose, who is 82. David takes 11 medicines per day and already uses a Webster Pack. After a recent hospitalisation, he was prescribed antibiotics and a couple of other medicines that cannot be added to his regular Webster Pack. David has noticed his memory is declining and he is forgetting doses. His family lives about an hour away, so they need remote visibility without making David manage a complex app.
+Eleanor is 86 and lives with his wife , who is 82. Eleanor takes 11 medicines per day and already uses a Webster Pack. After a recent hospitalisation, he was prescribed antibiotics and a couple of other medicines that cannot be added to his regular Webster Pack. Eleanor has noticed his memory is declining and he is forgetting doses. His family lives about an hour away, so they need remote visibility without making Eleanor manage a complex app.
 
 ## Target Users
 - Seniors who need accessible medication reminders with voice playback and large controls.
@@ -34,7 +34,7 @@ David is 86 and lives with his wife Rose, who is 82. David takes 11 medicines pe
 - No real geofencing in v1; leaving home can be simulated as an event.
 
 ## Core User Stories
-- As a caregiver, I can add David's temporary medicines after hospital discharge.
+- As a caregiver, I can add Eleanor's temporary medicines after hospital discharge.
 - As a caregiver, I can upload or paste a script as a demo intake path.
 - As a caregiver, I can assign medicines to routine events instead of only clock times.
 - As a senior, I can receive an event-based reminder that shows the medicine and dose.
@@ -42,8 +42,8 @@ David is 86 and lives with his wife Rose, who is 82. David takes 11 medicines pe
 - As a senior, I can say I do not want to take it and explain why.
 - As a senior, I can ask to be reminded later or request help.
 - As a caregiver, I can see today's event-based medication status.
-- As a caregiver, I can see why David refused a dose.
-- As a caregiver, I can be notified when David misses a dose for a completed or skipped event.
+- As a caregiver, I can see why Eleanor refused a dose.
+- As a caregiver, I can be notified when Eleanor misses a dose for a completed or skipped event.
 - As a senior, I can receive a prompt to take required medicines with me when I leave home.
 
 ## Backend Capabilities
@@ -80,7 +80,7 @@ David is 86 and lives with his wife Rose, who is 82. David takes 11 medicines pe
 ## Safety Requirements
 The app must always show:
 
-> MediMate Voice does not provide medical advice. Always follow your doctor's or pharmacist's instructions.
+> Pilly does not provide medical advice. Always follow your doctor's or pharmacist's instructions.
 
 Urgent phrases such as chest pain, cannot breathe, fell, dizzy, or emergency must trigger a static emergency response and be logged as `help_requested`.
 
@@ -90,5 +90,5 @@ Urgent phrases such as chest pain, cannot breathe, fell, dizzy, or emergency mus
 - Medication reminders are event-based, not time-window based.
 - Refusal reasons are captured and visible to caregivers.
 - Event completion can trigger caregiver missed-dose alerts.
-- Leaving-home simulation prompts David to take required medicines with him.
+- Leaving-home simulation prompts Eleanor to take required medicines with him.
 - Gemini fallback works without an API key.

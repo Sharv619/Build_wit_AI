@@ -1,4 +1,4 @@
-window.MEDIMATE_FIREBASE_CONFIG = {
+window.PILLY_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBTlSOD9Vz5LoiQq8zTSJyZ8ET-4NMHpoI",
   authDomain: "medimate-voice-demo.firebaseapp.com",
   projectId: "medimate-voice-demo",

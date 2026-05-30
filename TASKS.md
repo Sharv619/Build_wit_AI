@@ -1,14 +1,14 @@
-# MediMate Voice Tasks
+# Pilly Tasks
 
 ## Phase 1: Firebase Backend Setup
-- [ ] Create Firebase project for MediMate Voice.
+- [ ] Create Firebase project for Pilly.
 - [ ] Enable Firebase Auth, Firestore, Storage, and Cloud Functions.
 - [ ] Configure backend environment variables, including optional `GEMINI_API_KEY`.
 - [ ] Add Firebase emulator setup for local backend testing.
 
 ## Phase 2: Firestore Data Model
 - [ ] Define collections for users, households, medications, routine events, medication logs, notifications, and script uploads.
-- [ ] Seed David as the senior, Rose as spouse context, and at least one family caregiver.
+- [ ] Seed Eleanor as the senior,  as spouse context, and at least one family caregiver.
 - [ ] Seed sample Webster Pack medicines and one post-hospital antibiotic outside the Webster Pack.
 - [ ] Add event trigger fields for breakfast, lunch, dinner, bedtime, leaving home, post-discharge, and caregiver check-in.
 

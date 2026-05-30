@@ -1,5 +1,5 @@
 ---
-name: MediMate Voice
+name: Pilly
 colors:
   surface: '#fbf9f5'
   surface-dim: '#dbdad6'

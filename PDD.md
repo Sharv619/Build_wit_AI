@@ -1,7 +1,7 @@
-# MediMate Voice PDD
+# Pilly PDD
 
 ## Product Design Direction
-MediMate Voice should feel calm, practical, and easy to operate when the Stitch frontend is added. The backend should provide clean state and copy so the frontend can focus on simple senior and caregiver experiences instead of duplicating medication logic.
+Pilly should feel calm, practical, and easy to operate when the Stitch frontend is added. The backend should provide clean state and copy so the frontend can focus on simple senior and caregiver experiences instead of duplicating medication logic.
 
 ## Design Principles
 - Backend-first; Stitch frontend later.

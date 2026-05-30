@@ -1,7 +1,7 @@
-# MediMate Voice MCP
+# Pilly MCP
 
 ## Purpose
-This document lists Model Context Protocol opportunities for the backend-first MediMate Voice project. MCP is not required for the first prototype, but it can support documentation lookup, Firebase validation, browser testing, script processing research, and demo operations.
+This document lists Model Context Protocol opportunities for the backend-first Pilly project. MCP is not required for the first prototype, but it can support documentation lookup, Firebase validation, browser testing, script processing research, and demo operations.
 
 ## Current Prototype
 The first pass should use Firebase directly:
@@ -25,13 +25,13 @@ Use a documentation MCP to retrieve current references for:
 ### Test Automation MCP
 Use a browser automation MCP after Stitch integration to:
 - Open the Stitch frontend.
-- Run the David/Rose demo workflow.
+- Run the Eleanor demo workflow.
 - Capture mobile viewport screenshots.
 - Verify that event reminders, refusal flows, and caregiver alerts render correctly.
 
 ### Firebase/Data MCP
 Use a Firebase-aware or local data MCP to inspect or seed:
-- David/Rose demo users.
+- Eleanor demo users.
 - Household links.
 - Medication records.
 - Routine event records.
@@ -59,7 +59,7 @@ Use an issue tracker MCP to sync implementation tasks from `TASKS.md` into proje
 ## Future MCP Tasks
 - [ ] Add Firebase documentation lookup flow.
 - [ ] Add Firebase emulator test workflow.
-- [ ] Add David/Rose seed-data utility.
+- [ ] Add Eleanor seed-data utility.
 - [ ] Add script upload extraction exploration.
 - [ ] Add leaving-home event simulation checks.
 - [ ] Add browser automation workflow after Stitch frontend is connected.

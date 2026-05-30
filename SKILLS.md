@@ -1,4 +1,4 @@
-# MediMate Voice Skills
+# Pilly Skills
 
 ## Product Skills
 - Translate assistive health needs into backend-supported medication workflows.

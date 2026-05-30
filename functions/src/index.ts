@@ -160,31 +160,23 @@ export const processScriptUpload = onCall(async (request) => {
 });
 
 export const seedDemoData = onCall(async () => {
-  const householdId = "demo-household-david-rose";
-  const davidId = "demo-david";
-  const roseId = "demo-rose";
+  const householdId = "demo-household-eleanor";
+  const eleanorId = "demo-eleanor";
   const caregiverId = "demo-caregiver";
   const timestamp = now();
 
   const batch = db.batch();
   batch.set(db.collection("households").doc(householdId), {
-    name: "David and Rose",
-    primarySeniorId: davidId,
+    name: "Eleanor",
+    primarySeniorId: eleanorId,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
-  batch.set(db.collection("users").doc(davidId), {
+  batch.set(db.collection("users").doc(eleanorId), {
     householdId,
-    name: "David",
+    name: "Eleanor",
     age: 86,
     role: "senior",
-    createdAt: timestamp,
-  });
-  batch.set(db.collection("users").doc(roseId), {
-    householdId,
-    name: "Rose",
-    age: 82,
-    role: "spouse",
     createdAt: timestamp,
   });
   batch.set(db.collection("users").doc(caregiverId), {
@@ -198,7 +190,7 @@ export const seedDemoData = onCall(async () => {
   const medicines: Array<Omit<Medication, "createdAt" | "updatedAt">> = [
     {
       householdId,
-      userId: davidId,
+      userId: eleanorId,
       name: "Webster Pack morning medicines",
       dose: "1 pack",
       instructions: "Take the morning Webster Pack if it matches current pharmacy instructions.",
@@ -209,7 +201,7 @@ export const seedDemoData = onCall(async () => {
     },
     {
       householdId,
-      userId: davidId,
+      userId: eleanorId,
       name: "Post-hospital antibiotic",
       dose: "1 tablet",
       instructions: "Temporary medicine outside the Webster Pack.",
@@ -226,7 +218,7 @@ export const seedDemoData = onCall(async () => {
   });
 
   await batch.commit();
-  return { householdId, davidId, roseId, caregiverId };
+  return { householdId, eleanorId, caregiverId };
 });
 
 async function createMissedLogsForEvent(

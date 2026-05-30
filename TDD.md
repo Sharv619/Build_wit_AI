@@ -1,7 +1,7 @@
-# MediMate Voice TDD
+# Pilly TDD
 
 ## Technical Overview
-MediMate Voice will be implemented backend-first on Firebase. The Stitch frontend will be added later and should consume Firebase Auth, Firestore, Storage, and Cloud Functions rather than owning medication business logic.
+Pilly will be implemented backend-first on Firebase. The Stitch frontend will be added later and should consume Firebase Auth, Firestore, Storage, and Cloud Functions rather than owning medication business logic.
 
 The backend owns event-based medication reminders, medication response logging, caregiver alerts, script upload processing, Gemini integration, deterministic AI fallback, and safety enforcement.
 
@@ -18,7 +18,7 @@ The backend owns event-based medication reminders, medication response logging, 
 
 ## Firestore Collections
 - `users/{userId}`: senior, spouse, caregiver, or family profile.
-- `households/{householdId}`: links David, Rose, and family caregivers.
+- `households/{householdId}`: links Eleanor, , and family caregivers.
 - `medications/{medicationId}`: medicine details, dose, source, active state, and event triggers.
 - `routineEvents/{eventId}`: event instances such as breakfast, lunch, dinner, bedtime, leaving home, post-discharge, or caregiver check-in.
 - `medicationLogs/{logId}`: taken, snoozed, missed, refused, or help-requested records.
