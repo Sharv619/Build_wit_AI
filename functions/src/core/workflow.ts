@@ -48,6 +48,15 @@ export function leavingHomeMedicines(medications: WorkflowMedication[]): Workflo
   return medicationsForEvent(medications, "leaving_home");
 }
 
+export function leavingHomeReminderMessage(medications: WorkflowMedication[]): string {
+  const names = leavingHomeMedicines(medications)
+    .map((medication) => medication.dose ? `${medication.name} (${medication.dose})` : medication.name);
+  const prefix = names.length
+    ? `Some medicines may need to be taken along when leaving home: ${names.join(", ")}.`
+    : "Some medicines may need to be taken along when leaving home.";
+  return `${prefix} Please check the medication list and contact a caregiver, pharmacist, or clinician if unsure.`;
+}
+
 function hasFinalLog(logs: WorkflowLog[], medicationId: string, routineEventId: string): boolean {
   return logs.some((log) =>
     log.medicationId === medicationId &&

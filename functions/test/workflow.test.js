@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  leavingHomeReminderMessage,
   leavingHomeMedicines,
   medicationsForEvent,
   planMissedDoseNotifications,
@@ -42,4 +43,12 @@ test("leaving-home helper returns active medicines tied to leaving_home", () => 
     leavingHomeMedicines(medicines).map((medicine) => medicine.id),
     ["leaving-home-dose"],
   );
+});
+
+test("leaving-home reminder copy is bounded support language", () => {
+  const message = leavingHomeReminderMessage(medicines);
+
+  assert.match(message, /Some medicines may need to be taken along when leaving home/i);
+  assert.match(message, /Please check the medication list/i);
+  assert.doesNotMatch(message, /take extra|skip your dose|change your dose|you should stop medication/i);
 });

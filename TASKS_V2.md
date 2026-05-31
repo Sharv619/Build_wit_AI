@@ -18,6 +18,7 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Demo verification checklist exists.
 - [x] Frontend core medication response flow calls `recordMedicationResponse`.
 - [x] Frontend event completion flow calls `completeRoutineEvent`.
+- [x] Frontend leaving-home flow calls `simulateLeavingHome`.
 
 ## P0 Backend Hardening Tasks
 - [x] Add `functions/package.json` test script.
@@ -26,6 +27,7 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Align fallback classifier with v2 `unknown` status and expanded refusal reasons.
 - [x] Move frontend medication response classification/log write to `recordMedicationResponse`.
 - [x] Move frontend event completion and missed-dose creation to `completeRoutineEvent`.
+- [x] Move frontend leaving-home event and notification creation to `simulateLeavingHome`.
 - [ ] Create caregiver-visible notifications for refusal responses.
 - [ ] Create caregiver-visible notifications for help-request responses.
 - [ ] Create caregiver-visible notifications for urgent phrase responses.
@@ -38,12 +40,13 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Document golden path, refusal path, help-request path, urgent phrase path, missed-dose path, leaving-home path, and Trusted Family Voice path.
 - [x] Keep AI usage limited to response classification and safe workflow routing.
 - [x] Keep refusal/help/urgent flows bounded by static safety language in tests.
+- [x] Keep leaving-home reminder copy bounded by support/check language in tests.
 - [ ] Add Firestore rules for `voiceReminders`.
 - [ ] Add Storage rule boundaries for voice reminder audio.
 - [ ] Add emulator tests for household access rules.
 - [ ] Verify caregiver dashboard behavior against the new `missed_dose` notification type.
 - [x] Wire frontend `completeEvent` to `completeRoutineEvent`.
-- [ ] Wire frontend leaving-home demo to callable `simulateLeavingHome`.
+- [x] Wire frontend leaving-home demo to callable `simulateLeavingHome`.
 
 ## P2 Demo/Portfolio Polish Tasks
 - [x] Add README positioning and MCP instructions.
@@ -61,6 +64,7 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Pure missed-dose planning checks only medicines tied to the completed event.
 - [x] Pure missed-dose planning does not duplicate alerts when a final log already exists.
 - [x] Pure leaving-home selection returns active `leaving_home` medicines.
+- [x] Pure leaving-home reminder copy avoids unsafe medical advice phrases.
 - [ ] Callable `recordMedicationResponse` writes expected medication log.
 - [ ] Refusal response creates caregiver-visible notification.
 - [ ] Help-request response creates caregiver-visible notification.
@@ -88,7 +92,8 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - Manual Firebase/browser verification remains pending.
 - Core response logging is now routed through `recordMedicationResponse`, but manual browser verification is still pending.
 - Event completion and missed-dose creation are now routed through `completeRoutineEvent`, but manual browser verification is still pending.
-- Frontend still directly writes Firestore for demo seeding, medication setup, and leaving-home simulation.
+- Leaving-home event and notification creation are now routed through `simulateLeavingHome`, but manual browser verification is still pending.
+- Frontend still directly writes Firestore for demo seeding and medication setup.
 - Caregiver-visible refusal, help-request, and urgent notification behavior remains pending backend implementation.
 - Trusted Family Voice remains a documented boundary concept until consent, metadata, and Storage rules are implemented.
 
@@ -96,5 +101,6 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - Add emulator-backed callable tests for logs, notifications, routine event completion, seed data, and household rules.
 - Implement caregiver-visible notifications for refusal, help-request, and urgent phrase responses.
 - Verify missed-dose callable idempotency with emulator tests.
+- Add emulator-backed callable tests for `simulateLeavingHome`.
 - Add `voiceReminders` Firestore and Storage rule boundaries.
 - Refine MCP safety audit to distinguish unsafe claims from negated safety disclaimers.

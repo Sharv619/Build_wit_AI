@@ -113,8 +113,9 @@ Expected result:
 - Only active medicines tied to `leaving_home` are returned.
 - A leaving-home notification appears.
 - Copy remains bounded and does not provide dosage changes or medical advice.
+- The frontend calls `simulateLeavingHome` and does not directly create leaving-home routine event or notification documents.
 
-Status: pure medicine selection covered by automated test; full callable notification behavior pending emulator/manual verification.
+Status: frontend is wired to `simulateLeavingHome`; pure medicine selection and safe reminder copy are covered by automated tests; full Firestore callable behavior pending emulator/manual verification.
 
 ## Trusted Family Voice Path
 
@@ -141,6 +142,6 @@ Status: boundary documented; Firestore/Storage rule coverage and implementation 
 
 - The core medication response flow calls the `recordMedicationResponse` Cloud Function.
 - The event completion flow calls the `completeRoutineEvent` Cloud Function.
+- The leaving-home flow calls the `simulateLeavingHome` Cloud Function.
 - The caregiver dashboard still reads `medications`, `medicationLogs`, and `notifications` directly from Firestore.
 - Demo seeding and medication setup still write directly to Firestore.
-- `simulateLeavingHome` still writes directly to Firestore in the frontend and should be wired to `simulateLeavingHome` in a later hardening step.

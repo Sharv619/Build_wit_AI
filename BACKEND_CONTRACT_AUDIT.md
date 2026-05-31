@@ -11,7 +11,8 @@ The backend already supports the core Pilly workflow: bounded response classific
 v2 hardening gaps found during audit:
 - Refusal and help-request responses currently write medication logs but do not create caregiver-visible notifications.
 - The frontend core medication response flow now calls `recordMedicationResponse`; the frontend event completion flow now calls `completeRoutineEvent`.
-- The frontend still writes Firestore directly for demo seeding, medication setup, and leaving-home simulation.
+- The frontend leaving-home flow now calls `simulateLeavingHome`.
+- The frontend still writes Firestore directly for demo seeding and medication setup.
 - Missed-dose handling is idempotent for a repeated `routineEventId`; the frontend now passes a stable demo event id for the selected event/day, but callable idempotency still needs emulator verification.
 - `seedDemoData` creates users, household, and medications, but no starter routine events.
 - Firestore rules do not yet include `voiceReminders`.
@@ -146,6 +147,7 @@ Missing test coverage:
 
 Input:
 - `userId`: required when Auth is not present.
+- `seniorId`: optional demo field. When present, medicine selection is scoped to this senior instead of the authenticated demo operator.
 - `householdId`: required string.
 
 Output:
@@ -162,18 +164,20 @@ Firestore writes:
 - Adds one `notifications` document.
 
 Notification behavior:
-- Creates a leaving-home reminder notification.
+- Creates a `leaving_home` notification.
 
 Safety behavior:
-- Reminder copy asks the senior to check/take medicines with them without changing dosage or providing clinical guidance.
+- Reminder copy uses support/check language.
+- It does not diagnose, recommend medication, recommend dose changes, tell the senior to skip medication, or tell the senior to take extra medication.
+- Frontend calls this callable instead of directly creating leaving-home routine event or notification documents.
 
 Existing test coverage:
-- None found.
+- Pure workflow helper tests cover active `leaving_home` medicine selection and bounded reminder copy.
 
 Missing test coverage:
 - Leaving-home event creation.
 - Leaving-home notification creation.
-- Returned medicine list is limited to `leaving_home` medicines.
+- Callable Firestore verification that returned medicine list is limited to `leaving_home` medicines.
 
 ## `generateReminderCopy`
 

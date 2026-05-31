@@ -86,7 +86,7 @@ export interface NotificationEvent {
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose" | "leaving_home_reminder";
+  type: "dose_reminder" | "missed_dose" | "leaving_home";
   message: string;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
