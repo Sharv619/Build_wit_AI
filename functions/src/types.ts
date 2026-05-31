@@ -43,6 +43,17 @@ export type Intent =
   | "unknown"
   | "urgent";
 
+export type NotificationType =
+  | "dose_reminder"
+  | "missed_dose"
+  | "refusal"
+  | "help_requested"
+  | "leaving_home"
+  | "urgent_phrase"
+  | "system";
+
+export type NotificationSeverity = "info" | "warning" | "urgent";
+
 export interface Medication {
   householdId: string;
   userId: string;
@@ -83,11 +94,15 @@ export interface MedicationLog {
 export interface NotificationEvent {
   householdId: string;
   userId: string;
+  seniorId?: string;
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose" | "leaving_home";
+  type: NotificationType;
+  severity?: NotificationSeverity;
+  title?: string;
   message: string;
+  refusalReason?: RefusalReason;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;

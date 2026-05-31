@@ -107,11 +107,22 @@ interface NotificationEvent {
   id: string;
   householdId: string;
   userId: string;
+  seniorId?: string;
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose" | "leaving_home";
+  type:
+    | "dose_reminder"
+    | "missed_dose"
+    | "refusal"
+    | "help_requested"
+    | "leaving_home"
+    | "urgent_phrase"
+    | "system";
+  severity?: "info" | "warning" | "urgent";
+  title?: string;
   message: string;
+  refusalReason?: RefusalReason;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;
@@ -120,7 +131,7 @@ interface NotificationEvent {
 
 ## Cloud Functions Contract
 - `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, unknown, or urgent.
-- `recordMedicationResponse`: validates and writes medication logs, including refusal reasons.
+- `recordMedicationResponse`: validates and writes medication logs, including refusal reasons and caregiver-visible refusal/help/urgent notifications.
 - `completeRoutineEvent`: marks an event complete or skipped and creates missed-dose alerts when relevant medicines have no final response.
 - `simulateLeavingHome`: creates a leaving-home routine event and reminder notification.
 - `generateReminderCopy`: creates short friendly reminder text without medical advice.

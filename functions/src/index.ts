@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import textToSpeech = require("@google-cloud/text-to-speech");
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { classifyFallback, classifyWithGemini, missedDoseCopy, reminderCopy } from "./ai";
+import { writeMedicationResponse } from "./core/record-response";
 import { leavingHomeReminderMessage } from "./core/workflow";
 import {
   Medication,
@@ -35,6 +36,7 @@ export const recordMedicationResponse = onCall(async (request) => {
   const responseMethod = enumField<ResponseMethod>(request.data, "responseMethod", ["button", "voice", "typed", "system"]);
   const responseText = optionalString(request.data.responseText);
   const routineEventId = optionalString(request.data.routineEventId);
+  const caregiverId = optionalString(request.data.caregiverId);
 
   const classified = responseText
     ? await classifyWithGemini(responseText)
@@ -44,26 +46,29 @@ export const recordMedicationResponse = onCall(async (request) => {
   const status = normalizeStatus(requestedStatus, classified.intent);
   const refusalReason = normalizeRefusalReason(request.data.refusalReason) ?? classified.refusalReason;
 
-  const log: MedicationLog = {
+  const log = await writeMedicationResponse(db, {
     householdId,
     medicationId,
-    routineEventId,
     userId,
+    caregiverId,
+    routineEventId,
     status,
     responseMethod,
     responseText,
-    refusalReason: status === "refused" ? refusalReason ?? "other" : undefined,
-    refusalNote: optionalString(request.data.refusalNote),
-    createdAt: now(),
-  };
-
-  const doc = await db.collection("medicationLogs").add(removeUndefined(log));
-  return {
-    logId: doc.id,
-    status,
     intent: classified.intent,
+    refusalReason,
+    refusalNote: optionalString(request.data.refusalNote),
+    safeMessage: classified.safeMessage,
+    now,
+  });
+
+  return {
+    logId: log.logId,
+    status: log.status,
+    intent: log.intent,
     refusalReason: log.refusalReason,
-    message: classified.safeMessage,
+    message: log.message,
+    notifications: log.notifications,
   };
 });
 

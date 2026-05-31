@@ -557,7 +557,8 @@ function renderDashboard() {
   }).join("");
 
   const alertRows = notifications.map((note) => `
-    <div class="rounded-2xl ${["missed_dose", "missed_dose_alert"].includes(note.type) ? "bg-error-container text-error" : "bg-primary-container text-primary"} p-4 font-bold">
+    <div class="rounded-2xl ${notificationClass(note)} p-4 font-bold">
+      ${note.title ? `<p class="mb-1 text-sm uppercase tracking-wide">${escapeHtml(note.title)}</p>` : ""}
       ${escapeHtml(note.message)}
     </div>
   `).join("");
@@ -654,6 +655,14 @@ function statusClass(status) {
   if (status === "missed" || status === "help_requested") return "bg-error-container text-error";
   if (status === "refused" || status === "snoozed") return "bg-secondary-container text-secondary";
   return "bg-[#efeeea] text-on-surface-variant";
+}
+
+function notificationClass(note) {
+  if (["missed_dose", "missed_dose_alert", "help_requested", "urgent_phrase"].includes(note.type)) {
+    return "bg-error-container text-error";
+  }
+  if (note.type === "refusal") return "bg-secondary-container text-secondary";
+  return "bg-primary-container text-primary";
 }
 
 function escapeHtml(value) {

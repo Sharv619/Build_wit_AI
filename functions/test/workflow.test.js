@@ -5,6 +5,7 @@ const {
   leavingHomeReminderMessage,
   leavingHomeMedicines,
   medicationsForEvent,
+  planMedicationResponseNotifications,
   planMissedDoseNotifications,
 } = require("../lib/core/workflow.js");
 
@@ -52,3 +53,75 @@ test("leaving-home reminder copy is bounded support language", () => {
   assert.match(message, /Please check the medication list/i);
   assert.doesNotMatch(message, /take extra|skip your dose|change your dose|you should stop medication/i);
 });
+
+test("refusal response creates caregiver-visible notification plan with reason", () => {
+  const [notification] = planMedicationResponseNotifications({
+    householdId: "demo-household-eleanor",
+    seniorId: "demo-eleanor",
+    medicationId: "med-antibiotic",
+    routineEventId: "event-lunch",
+    status: "refused",
+    intent: "refused",
+    refusalReason: "feeling_unwell",
+  });
+
+  assert.equal(notification.type, "refusal");
+  assert.equal(notification.severity, "warning");
+  assert.equal(notification.refusalReason, "feeling_unwell");
+  assertNoUnsafeAdvice(notification.message);
+});
+
+test("help-request response creates caregiver-visible notification plan", () => {
+  const [notification] = planMedicationResponseNotifications({
+    householdId: "demo-household-eleanor",
+    seniorId: "demo-eleanor",
+    medicationId: "med-antibiotic",
+    status: "help_requested",
+    intent: "help_requested",
+  });
+
+  assert.equal(notification.type, "help_requested");
+  assert.equal(notification.severity, "urgent");
+  assertNoUnsafeAdvice(notification.message);
+});
+
+test("urgent phrase creates urgent notification plan with static guidance", () => {
+  const [notification] = planMedicationResponseNotifications({
+    householdId: "demo-household-eleanor",
+    seniorId: "demo-eleanor",
+    medicationId: "med-antibiotic",
+    status: "help_requested",
+    intent: "urgent",
+  });
+
+  assert.equal(notification.type, "urgent_phrase");
+  assert.equal(notification.severity, "urgent");
+  assert.match(notification.message, /urgent human attention/i);
+  assertNoUnsafeAdvice(notification.message);
+});
+
+test("response notification planner only returns supported notification types", () => {
+  const supportedTypes = new Set(["missed_dose", "refusal", "help_requested", "leaving_home", "urgent_phrase", "system"]);
+  const cases = [
+    { status: "refused", intent: "refused", refusalReason: "other" },
+    { status: "help_requested", intent: "help_requested" },
+    { status: "help_requested", intent: "urgent" },
+  ];
+
+  for (const item of cases) {
+    const plans = planMedicationResponseNotifications({
+      householdId: "demo-household-eleanor",
+      seniorId: "demo-eleanor",
+      medicationId: "med-antibiotic",
+      ...item,
+    });
+
+    for (const plan of plans) {
+      assert.ok(supportedTypes.has(plan.type), `${plan.type} should be supported`);
+    }
+  }
+});
+
+function assertNoUnsafeAdvice(message) {
+  assert.doesNotMatch(message, /take extra|skip your dose|change your dose|ignore symptoms|diagnosed|you should stop medication/i);
+}

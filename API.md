@@ -103,7 +103,7 @@ Response:
 
 ### `recordMedicationResponse`
 
-Validates and writes a medication log. Response classification runs server-side. The current implementation does not yet create caregiver-visible notifications for refusal, help-request, or urgent-phrase responses.
+Validates and writes a medication log. Response classification runs server-side. Refusal, help-request, and urgent-phrase responses create caregiver-visible notifications for human follow-up.
 
 Request:
 ```json
@@ -124,6 +124,11 @@ Notes:
 - `seniorId` is accepted by the demo backend so the log can be associated with the senior even when the browser is authenticated as a demo caregiver/operator.
 - `responseText` is the value currently classified by the backend.
 - `rawResponse` and `responseSource` are accepted by the frontend contract for clarity but are not yet persisted by the backend implementation.
+- Refusal notifications use `type: "refusal"` and `severity: "warning"`.
+- Help-request notifications use `type: "help_requested"` and `severity: "urgent"`.
+- Urgent phrase notifications use `type: "urgent_phrase"` and `severity: "urgent"`.
+- These notifications are caregiver visibility only. They do not provide diagnosis, dosage advice, medication advice, or automatic emergency triage.
+- Duplicate prevention checks for an existing notification with the same household, senior, medication, routine event, and notification type before creating another notification.
 
 Response:
 ```json
@@ -131,7 +136,8 @@ Response:
   "logId": "LOG_DOC_ID",
   "status": "taken",
   "intent": "taken",
-  "message": "Response recorded."
+  "message": "Response recorded.",
+  "notifications": []
 }
 ```
 

@@ -9,7 +9,7 @@ Scope: existing Firebase callable functions in `functions/src/index.ts`, AI help
 The backend already supports the core Pilly workflow: bounded response classification, medication response logging, event completion, missed-dose notifications, leaving-home simulation, reminder copy, missed-dose copy, script upload extraction, and demo seeding.
 
 v2 hardening gaps found during audit:
-- Refusal and help-request responses currently write medication logs but do not create caregiver-visible notifications.
+- Refusal, help-request, and urgent phrase responses now create caregiver-visible notifications from `recordMedicationResponse`.
 - The frontend core medication response flow now calls `recordMedicationResponse`; the frontend event completion flow now calls `completeRoutineEvent`.
 - The frontend leaving-home flow now calls `simulateLeavingHome`.
 - The frontend still writes Firestore directly for demo seeding and medication setup.
@@ -18,6 +18,7 @@ v2 hardening gaps found during audit:
 - Firestore rules do not yet include `voiceReminders`.
 - Current code has been partially aligned with v2 naming: missed-dose notifications now use `missed_dose`, and routine event values use `post_discharge_check_in`.
 - A minimal Node test harness now covers fallback classification, urgent phrase safety, unsafe advice guards, and pure workflow helper behavior. Firestore emulator integration tests are still missing.
+- A write-layer test double now verifies the refused-response `recordMedicationResponse` path writes the expected medication log and refusal notification payloads without using a live Firebase emulator.
 
 ## `classifyMedicationResponse`
 
@@ -81,26 +82,31 @@ Firestore reads:
 
 Firestore writes:
 - Adds one `medicationLogs` document.
+- Adds caregiver-visible `notifications` documents for refusal, help-request, and urgent phrase responses.
 
 Notification behavior:
-- Current implementation does not create notifications for refusal, help-request, or urgent responses.
-- v2 requires caregiver-visible notifications for refusal, help-request, and urgent phrase flows.
+- `refused` responses create `refusal` notifications with `warning` severity and refusal reason when available.
+- `help_requested` responses create `help_requested` notifications with `urgent` severity.
+- Urgent phrase responses create `urgent_phrase` notifications with `urgent` severity.
+- Duplicate prevention checks for an existing notification with the same household, senior, medication, routine event, and notification type before creating another notification.
 
 Safety behavior:
 - Response text is classified server-side.
 - Urgent intents normalize to `help_requested`; unknown responses remain `unknown`.
 - Refusal reason is stored only when status is `refused`.
 - Safe message comes from bounded AI/fallback helper.
+- Notification copy is caregiver-facing and does not provide medical advice, dosage advice, diagnosis, or automatic emergency triage.
 
 Existing test coverage:
-- None found.
+- Pure workflow helper tests cover refusal, help-request, urgent-phrase notification planning, supported notification types, refusal reason inclusion, and unsafe-advice guards.
+- Write-layer test double covers refused-response medication log payload, refusal notification payload, refusal reason preservation, unsafe-advice guard, and duplicate refusal-notification prevention for the same medication/event/type.
 
 Missing test coverage:
-- Medication log write.
-- Refusal notification creation.
-- Help-request notification creation.
-- Urgent phrase notification creation.
-- No medical advice in returned message.
+- Full callable/emulator medication log write.
+- Full callable/emulator refusal notification creation.
+- Callable Firestore help-request notification creation.
+- Callable Firestore urgent phrase notification creation.
+- Callable duplicate-prevention behavior.
 
 ## `completeRoutineEvent`
 

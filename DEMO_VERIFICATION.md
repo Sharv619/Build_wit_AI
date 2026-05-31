@@ -39,10 +39,10 @@ Senior says "I don't want to take it because I feel sick"
 Expected result:
 - Response is classified as `refused`.
 - Refusal reason is `feeling_unwell`.
-- Caregiver-visible refusal notification appears once notification behavior is implemented.
+- Backend creates a caregiver-visible `refusal` notification.
 - The UI does not tell the senior whether refusing is medically safe.
 
-Status: frontend response path calls `recordMedicationResponse` for server-side classification; caregiver notification still pending backend implementation/manual verification.
+Status: backend notification planning and refused-response write payloads are covered by automated tests using a Firestore-like write-layer test double; full Firebase emulator/callable behavior remains pending.
 
 ## Help Request Path
 
@@ -56,10 +56,10 @@ Senior says "I need help"
 
 Expected result:
 - Response is classified as `help_requested`.
-- Caregiver-visible notification appears once notification behavior is implemented.
+- Backend creates a caregiver-visible `help_requested` notification.
 - The response does not provide medical advice.
 
-Status: frontend response path calls `recordMedicationResponse` for server-side classification; caregiver notification still pending backend implementation/manual verification.
+Status: backend notification planning is covered by automated test; full Firestore callable behavior pending emulator/manual verification.
 
 ## Urgent Phrase Path
 
@@ -76,9 +76,9 @@ Expected result:
 - Urgent phrase is detected.
 - Static safety guidance appears.
 - No diagnosis, dosage advice, medication recommendation, skip-dose advice, or extra-dose advice appears.
-- Caregiver-visible notification appears once notification behavior is implemented.
+- Backend creates a caregiver-visible `urgent_phrase` notification.
 
-Status: frontend response path calls `recordMedicationResponse` and displays the backend safe message; caregiver notification still pending backend implementation/manual verification.
+Status: backend notification planning is covered by automated test; full Firestore callable behavior pending emulator/manual verification.
 
 ## Missed-Dose Path
 

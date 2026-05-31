@@ -19,6 +19,8 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Frontend core medication response flow calls `recordMedicationResponse`.
 - [x] Frontend event completion flow calls `completeRoutineEvent`.
 - [x] Frontend leaving-home flow calls `simulateLeavingHome`.
+- [x] `recordMedicationResponse` creates caregiver-visible refusal, help-request, and urgent-phrase notification plans and writes them server-side.
+- [x] Write-layer test double verifies `recordMedicationResponse` refused-response medication log and refusal notification payloads.
 
 ## P0 Backend Hardening Tasks
 - [x] Add `functions/package.json` test script.
@@ -28,11 +30,12 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Move frontend medication response classification/log write to `recordMedicationResponse`.
 - [x] Move frontend event completion and missed-dose creation to `completeRoutineEvent`.
 - [x] Move frontend leaving-home event and notification creation to `simulateLeavingHome`.
-- [ ] Create caregiver-visible notifications for refusal responses.
-- [ ] Create caregiver-visible notifications for help-request responses.
-- [ ] Create caregiver-visible notifications for urgent phrase responses.
+- [x] Create caregiver-visible notifications for refusal responses.
+- [x] Create caregiver-visible notifications for help-request responses.
+- [x] Create caregiver-visible notifications for urgent phrase responses.
 - [ ] Confirm callable `completeRoutineEvent` idempotency through emulator tests.
-- [ ] Confirm `recordMedicationResponse` log writes through callable/emulator tests.
+- [x] Confirm `recordMedicationResponse` refused-response log and refusal notification write payloads through a Firestore-like test double.
+- [ ] Confirm `recordMedicationResponse` writes through full callable/emulator tests.
 - [ ] Confirm `simulateLeavingHome` notification writes through callable/emulator tests.
 - [ ] Confirm `seedDemoData` creates starter routine event data or document why it intentionally does not.
 
@@ -40,6 +43,7 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Document golden path, refusal path, help-request path, urgent phrase path, missed-dose path, leaving-home path, and Trusted Family Voice path.
 - [x] Keep AI usage limited to response classification and safe workflow routing.
 - [x] Keep refusal/help/urgent flows bounded by static safety language in tests.
+- [x] Keep refusal/help/urgent notifications caregiver-visible only, without medical advice.
 - [x] Keep leaving-home reminder copy bounded by support/check language in tests.
 - [ ] Add Firestore rules for `voiceReminders`.
 - [ ] Add Storage rule boundaries for voice reminder audio.
@@ -65,9 +69,14 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - [x] Pure missed-dose planning does not duplicate alerts when a final log already exists.
 - [x] Pure leaving-home selection returns active `leaving_home` medicines.
 - [x] Pure leaving-home reminder copy avoids unsafe medical advice phrases.
-- [ ] Callable `recordMedicationResponse` writes expected medication log.
-- [ ] Refusal response creates caregiver-visible notification.
-- [ ] Help-request response creates caregiver-visible notification.
+- [x] Pure notification planner creates refusal, help-request, and urgent-phrase notification plans.
+- [x] Write-layer test double verifies `recordMedicationResponse` refused-response medication log payload.
+- [x] Write-layer test double verifies `recordMedicationResponse` refused-response notification payload.
+- [x] Write-layer test double verifies refusal notification duplicate prevention for the same medication/event/type.
+- [ ] Callable/emulator `recordMedicationResponse` writes expected medication log.
+- [ ] Callable/emulator `recordMedicationResponse` writes refusal notification in Firestore.
+- [ ] Callable `recordMedicationResponse` writes help-request notification in Firestore.
+- [ ] Callable `recordMedicationResponse` writes urgent-phrase notification in Firestore.
 - [ ] Callable `completeRoutineEvent` creates missed-dose alerts only for medicines tied to that event.
 - [ ] Callable `completeRoutineEvent` does not duplicate missed-dose alerts when called repeatedly.
 - [ ] Callable `simulateLeavingHome` creates leaving-home notification.
@@ -94,12 +103,14 @@ Pilly v2 hardens the Firebase-backed medication support prototype while keeping 
 - Event completion and missed-dose creation are now routed through `completeRoutineEvent`, but manual browser verification is still pending.
 - Leaving-home event and notification creation are now routed through `simulateLeavingHome`, but manual browser verification is still pending.
 - Frontend still directly writes Firestore for demo seeding and medication setup.
-- Caregiver-visible refusal, help-request, and urgent notification behavior remains pending backend implementation.
+- Caregiver-visible refusal, help-request, and urgent notification behavior is implemented in `recordMedicationResponse`, but callable Firestore/emulator verification remains pending.
+- The first integration-style backend test uses a Firestore-like write-layer test double, not the Firebase emulator.
 - Trusted Family Voice remains a documented boundary concept until consent, metadata, and Storage rules are implemented.
 
 ## Next v3 Tasks
 - Add emulator-backed callable tests for logs, notifications, routine event completion, seed data, and household rules.
-- Implement caregiver-visible notifications for refusal, help-request, and urgent phrase responses.
+- Replace or complement the write-layer refused-response test with a full Firebase emulator callable test.
+- Add emulator-backed callable tests for refusal, help-request, and urgent phrase notifications.
 - Verify missed-dose callable idempotency with emulator tests.
 - Add emulator-backed callable tests for `simulateLeavingHome`.
 - Add `voiceReminders` Firestore and Storage rule boundaries.
