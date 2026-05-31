@@ -33,7 +33,8 @@ type MedicationStatus =
   | "snoozed"
   | "missed"
   | "refused"
-  | "help_requested";
+  | "help_requested"
+  | "unknown";
 
 type ResponseMethod = "button" | "voice" | "typed" | "system";
 
@@ -51,7 +52,7 @@ type MedicationEventTrigger =
   | "dinner"
   | "bedtime"
   | "leaving_home"
-  | "post_discharge"
+  | "post_discharge_check_in"
   | "caregiver_check_in";
 
 type RefusalReason =
@@ -59,7 +60,9 @@ type RefusalReason =
   | "side_effects"
   | "feeling_unwell"
   | "confused"
-  | "other";
+  | "does_not_understand"
+  | "other"
+  | "unknown";
 
 interface Medication {
   id: string;
@@ -107,7 +110,7 @@ interface NotificationEvent {
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
+  type: "dose_reminder" | "missed_dose" | "leaving_home_reminder";
   message: string;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
@@ -116,7 +119,7 @@ interface NotificationEvent {
 ```
 
 ## Cloud Functions Contract
-- `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, caregiver attention, or urgent.
+- `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, unknown, or urgent.
 - `recordMedicationResponse`: validates and writes medication logs, including refusal reasons.
 - `completeRoutineEvent`: marks an event complete or skipped and creates missed-dose alerts when relevant medicines have no final response.
 - `simulateLeavingHome`: creates a leaving-home routine event and reminder notification.

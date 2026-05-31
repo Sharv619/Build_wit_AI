@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && node --test",
     "lint": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.js",
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth,storage",

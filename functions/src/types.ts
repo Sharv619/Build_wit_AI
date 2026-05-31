@@ -4,7 +4,8 @@ export type MedicationStatus =
   | "snoozed"
   | "missed"
   | "refused"
-  | "help_requested";
+  | "help_requested"
+  | "unknown";
 
 export type ResponseMethod = "button" | "voice" | "typed" | "system";
 
@@ -22,7 +23,7 @@ export type MedicationEventTrigger =
   | "dinner"
   | "bedtime"
   | "leaving_home"
-  | "post_discharge"
+  | "post_discharge_check_in"
   | "caregiver_check_in";
 
 export type RefusalReason =
@@ -30,14 +31,16 @@ export type RefusalReason =
   | "side_effects"
   | "feeling_unwell"
   | "confused"
-  | "other";
+  | "does_not_understand"
+  | "other"
+  | "unknown";
 
 export type Intent =
   | "taken"
   | "snoozed"
   | "refused"
   | "help_requested"
-  | "caregiver_attention"
+  | "unknown"
   | "urgent";
 
 export interface Medication {
@@ -83,10 +86,9 @@ export interface NotificationEvent {
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
+  type: "dose_reminder" | "missed_dose" | "leaving_home_reminder";
   message: string;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;
 }
-

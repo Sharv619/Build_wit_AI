@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import textToSpeech = require("@google-cloud/text-to-speech");
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { classifyFallback, classifyWithGemini, missedDoseCopy, reminderCopy } from "./ai";
+import { leavingHomeReminderMessage } from "./core/workflow";
 import {
   Medication,
   MedicationEventTrigger,
@@ -109,16 +110,13 @@ export const simulateLeavingHome = onCall(async (request) => {
   } satisfies RoutineEvent);
 
   const meds = await medicationsForTrigger(householdId, userId, "leaving_home");
-  const names = meds.map((med) => `${med.data.name} (${med.data.dose})`);
-  const message = names.length
-    ? `Before leaving home, please take these medicines with you: ${names.join(", ")}.`
-    : "Before leaving home, please check whether you need to take any medicine with you.";
+  const message = leavingHomeReminderMessage(meds.map((med) => ({ id: med.id, ...med.data })));
 
   const notification = await createNotification({
     householdId,
     userId,
     routineEventId: eventRef.id,
-    type: "leaving_home_reminder",
+    type: "leaving_home",
     message,
     status: "sent",
     createdAt: now(),
@@ -334,7 +332,7 @@ async function createMissedLogsForEvent(
       userId,
       medicationId: med.id,
       routineEventId,
-      type: "missed_dose_alert",
+      type: "missed_dose",
       message: missedDoseCopy(med.data.name, trigger),
       status: "sent",
       createdAt: now(),
@@ -385,7 +383,8 @@ function targetUserId(request: { auth?: { uid?: string }; data: unknown }): stri
   // Demo bridge: callable functions may be invoked by an anonymous caregiver session
   // while the medication workflow is for Eleanor. Production should enforce caregiver
   // household membership before honoring a separate target user id.
-  return optionalString(isRecord(request.data) ? request.data.userId : undefined) ?? actorId(request);
+  if (!isRecord(request.data)) return actorId(request);
+  return optionalString(request.data.seniorId) ?? optionalString(request.data.userId) ?? actorId(request);
 }
 
 async function hasRecentDemoFinalLog(householdId: string, userId: string, medicationId: string): Promise<boolean> {
@@ -438,17 +437,16 @@ function textToSpeechClient(): textToSpeech.TextToSpeechClient {
 function normalizeStatus(status: MedicationStatus | undefined, intent: string): MedicationStatus {
   if (status && finalStatuses.includes(status)) return status;
   if (intent === "urgent") return "help_requested";
-  if (intent === "caregiver_attention") return "help_requested";
   return intent as MedicationStatus;
 }
 
 function normalizeRefusalReason(value: unknown): RefusalReason | undefined {
-  const allowed: RefusalReason[] = ["away_from_medicine", "side_effects", "feeling_unwell", "confused", "other"];
+  const allowed: RefusalReason[] = ["away_from_medicine", "side_effects", "feeling_unwell", "confused", "does_not_understand", "other", "unknown"];
   return typeof value === "string" && allowed.includes(value as RefusalReason) ? value as RefusalReason : undefined;
 }
 
 function eventTriggers(): MedicationEventTrigger[] {
-  return ["breakfast", "lunch", "dinner", "bedtime", "leaving_home", "post_discharge", "caregiver_check_in"];
+  return ["breakfast", "lunch", "dinner", "bedtime", "leaving_home", "post_discharge_check_in", "caregiver_check_in"];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

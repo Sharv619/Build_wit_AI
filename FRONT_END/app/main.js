@@ -190,21 +190,29 @@ async function recordResponse() {
   }
 
   const responseText = valueOf("response-text") || "I took it";
-  const result = await callFunctionOrFallback(
-    () => recordMedicationResponseFn({
+  try {
+    const result = await recordMedicationResponseFn({
+      userId: eleanorId,
+      seniorId: eleanorId,
       householdId,
       medicationId,
-      userId: eleanorId,
       responseMethod: "typed",
       responseText,
+      rawResponse: responseText,
+      responseSource: "typed",
       refusalNote: responseText
-    }),
-    () => recordResponseInDemoFirestore(medicationId, responseText)
-  );
-
-  const data = result.data || {};
-  setStatus(data.message || `Recorded ${labelFor(data.status)}.`);
-  document.getElementById("response-text").value = "";
+    });
+    const data = result.data || {};
+    const status = data.status || "unknown";
+    const message = data.message && data.message !== "Response recorded."
+      ? `${labelFor(status)}: ${data.message}`
+      : `Recorded ${labelFor(status)}.`;
+    setStatus(message);
+    document.getElementById("response-text").value = "";
+  } catch (error) {
+    console.error("Could not record medication response through Cloud Function", error);
+    setStatus("Could not record response. Please try again or ask a caregiver for help.", true);
+  }
 }
 
 async function playReminder() {
@@ -432,159 +440,42 @@ function listenForResponse() {
 async function completeEvent() {
   requireUser();
   const trigger = eventTriggerEl.value;
-  const result = await callFunctionOrFallback(
-    () => completeRoutineEventFn({
-      householdId,
+  const routineEventId = routineEventIdFor(trigger);
+
+  try {
+    const result = await completeRoutineEventFn({
       userId: eleanorId,
+      seniorId: eleanorId,
+      householdId,
+      routineEventId,
       trigger,
       status: "completed"
-    }),
-    () => completeEventInDemoFirestore(trigger)
-  );
+    });
 
-  const data = result.data || {};
-  const missedCount = Number(data.missedCount || 0);
-
-  setStatus(missedCount ? "Event completed. Missed-dose alert created." : "Event completed. No missed dose.");
+    const data = result.data || {};
+    setStatus(data.missedCount ? "Event completed. Missed-dose alert created." : "Event completed. No missed dose.");
+  } catch (error) {
+    console.error("Could not complete routine event through Cloud Function", error);
+    setStatus("Could not complete event. Please try again or ask a caregiver for help.", true);
+  }
 }
 
 async function simulateLeavingHome() {
   requireUser();
   eventTriggerEl.value = "leaving_home";
-  const result = await callFunctionOrFallback(
-    () => simulateLeavingHomeFn({
-      householdId,
-      userId: eleanorId
-    }),
-    simulateLeavingHomeInDemoFirestore
-  );
 
-  setStatus(result.data?.message || "Leaving-home reminder created.");
-  render();
-}
-
-async function callFunctionOrFallback(functionCall, fallbackCall) {
   try {
-    return await functionCall();
+    const result = await simulateLeavingHomeFn({
+      userId: eleanorId,
+      seniorId: eleanorId,
+      householdId
+    });
+    setStatus(result.data?.message || "Leaving-home reminder created.");
+    render();
   } catch (error) {
-    console.warn("Cloud Function unavailable. Using Spark-plan demo fallback.", error);
-    return { data: await fallbackCall() };
+    console.error("Could not simulate leaving-home reminder through Cloud Function", error);
+    setStatus("Could not create leaving-home reminder. Please try again or ask a caregiver for help.", true);
   }
-}
-
-async function recordResponseInDemoFirestore(medicationId, responseText) {
-  // Spark-plan demo fallback only. Production should use Cloud Functions for
-  // authoritative classification, validation, and audit controls.
-  const classified = classifyDemoResponse(responseText);
-  await addDoc(collection(db, "medicationLogs"), {
-    householdId,
-    medicationId,
-    userId: eleanorId,
-    status: classified.status,
-    responseMethod: "typed",
-    responseText,
-    refusalReason: classified.refusalReason || null,
-    refusalNote: classified.status === "refused" ? responseText : null,
-    createdAt: serverTimestamp()
-  });
-
-  return {
-    status: classified.status,
-    intent: classified.intent,
-    refusalReason: classified.refusalReason,
-    message: classified.message
-  };
-}
-
-async function completeEventInDemoFirestore(trigger) {
-  // Spark-plan demo fallback only. Keeps the hosted demo working without
-  // billable Cloud Functions.
-  const eventRef = await addDoc(collection(db, "routineEvents"), {
-    householdId,
-    userId: eleanorId,
-    trigger,
-    status: "completed",
-    occurredAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-
-  const medsForEvent = medications.filter((med) => med.eventTriggers?.includes(trigger));
-  const createdAlerts = [];
-  for (const med of medsForEvent) {
-    const hasFinal = logs.some((log) =>
-      log.medicationId === med.id &&
-      (log.routineEventId === eventRef.id || !log.routineEventId) &&
-      isFinalStatus(log.status)
-    );
-    if (hasFinal) continue;
-
-    await addDoc(collection(db, "medicationLogs"), {
-      householdId,
-      medicationId: med.id,
-      routineEventId: eventRef.id,
-      userId: eleanorId,
-      status: "missed",
-      responseMethod: "system",
-      createdAt: serverTimestamp()
-    });
-
-    const alert = await addDoc(collection(db, "notifications"), {
-      householdId,
-      userId: eleanorId,
-      medicationId: med.id,
-      routineEventId: eventRef.id,
-      type: "missed_dose_alert",
-      message: `Eleanor did not record ${med.name} for ${formatTrigger(trigger)}. Please check in when you can.`,
-      status: "sent",
-      createdAt: serverTimestamp()
-    });
-    createdAlerts.push(alert.id);
-  }
-
-  return {
-    routineEventId: eventRef.id,
-    trigger,
-    status: "completed",
-    missedCount: createdAlerts.length,
-    notifications: createdAlerts
-  };
-}
-
-async function simulateLeavingHomeInDemoFirestore() {
-  // Spark-plan demo fallback only. This does not provide medical advice; it only
-  // reminds the senior to check existing event-linked medicines.
-  const medsForEvent = medications.filter((med) => med.eventTriggers?.includes("leaving_home"));
-  const names = medsForEvent.map((med) => `${med.name} (${med.dose})`);
-  const message = names.length
-    ? `Before leaving home, please take these medicines with you: ${names.join(", ")}.`
-    : "Before leaving home, please check whether you need to take any medicine with you.";
-
-  const eventRef = await addDoc(collection(db, "routineEvents"), {
-    householdId,
-    userId: eleanorId,
-    trigger: "leaving_home",
-    status: "pending",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-
-  const notification = await addDoc(collection(db, "notifications"), {
-    householdId,
-    userId: eleanorId,
-    routineEventId: eventRef.id,
-    type: "leaving_home_reminder",
-    message,
-    status: "sent",
-    createdAt: serverTimestamp()
-  });
-
-  return {
-    routineEventId: eventRef.id,
-    notificationId: notification.id,
-    medications: medsForEvent,
-    message
-  };
 }
 
 function subscribeToFirestore() {
@@ -666,7 +557,7 @@ function renderDashboard() {
   }).join("");
 
   const alertRows = notifications.map((note) => `
-    <div class="rounded-2xl ${note.type === "missed_dose_alert" ? "bg-error-container text-error" : "bg-primary-container text-primary"} p-4 font-bold">
+    <div class="rounded-2xl ${["missed_dose", "missed_dose_alert"].includes(note.type) ? "bg-error-container text-error" : "bg-primary-container text-primary"} p-4 font-bold">
       ${escapeHtml(note.message)}
     </div>
   `).join("");
@@ -697,44 +588,6 @@ function voiceReminderFor(medicationId, trigger) {
   );
 }
 
-function classifyDemoResponse(text) {
-  const normalized = text.toLowerCase();
-  if (["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency"].some((term) => normalized.includes(term))) {
-    return {
-      status: "help_requested",
-      intent: "urgent",
-      message: "This may be urgent. Call emergency services now if Eleanor is in immediate danger. Pilly does not provide medical advice."
-    };
-  }
-  if (["later", "remind", "snooze", "wait"].some((term) => normalized.includes(term))) {
-    return { status: "snoozed", intent: "snoozed", message: "Response recorded." };
-  }
-  if (["do not want", "don't want", "refuse", "side effect", "not taking", "no"].some((term) => normalized.includes(term))) {
-    return {
-      status: "refused",
-      intent: "refused",
-      refusalReason: refusalReasonForDemo(normalized),
-      message: "I have recorded that Eleanor does not want to take this medicine. Please contact a caregiver, doctor, or pharmacist for guidance."
-    };
-  }
-  if (["help", "call", "caregiver", "need someone"].some((term) => normalized.includes(term))) {
-    return {
-      status: "help_requested",
-      intent: "help_requested",
-      message: "I have recorded that Eleanor needs help and the caregiver dashboard should show this."
-    };
-  }
-  return { status: "taken", intent: "taken", message: "Response recorded." };
-}
-
-function refusalReasonForDemo(text) {
-  if (text.includes("away") || text.includes("not home") || text.includes("left")) return "away_from_medicine";
-  if (text.includes("side effect") || text.includes("sick")) return "side_effects";
-  if (text.includes("unwell") || text.includes("nause") || text.includes("bad")) return "feeling_unwell";
-  if (text.includes("confus") || text.includes("not sure")) return "confused";
-  return "other";
-}
-
 function medicationForCurrentEvent() {
   return medications.find((med) => med.eventTriggers?.includes(eventTriggerEl.value));
 }
@@ -747,8 +600,9 @@ function requireUser() {
   if (!currentUser) throw new Error("Firebase Auth is not ready");
 }
 
-function isFinalStatus(status) {
-  return ["taken", "snoozed", "missed", "refused", "help_requested"].includes(status);
+function routineEventIdFor(trigger) {
+  const day = new Date().toISOString().slice(0, 10);
+  return [householdId, eleanorId, trigger, day].join("_");
 }
 
 function handleSnapshotError(label) {
