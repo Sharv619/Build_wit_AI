@@ -1,9 +1,13 @@
 export type MedicationStatus =
   | "pending"
+  | "pending_confirmation"
   | "taken"
+  | "taken_confirmed"
   | "snoozed"
   | "missed"
   | "refused"
+  | "skipped_confirmed"
+  | "unknown"
   | "help_requested";
 
 export type ResponseMethod = "button" | "voice" | "typed" | "system";

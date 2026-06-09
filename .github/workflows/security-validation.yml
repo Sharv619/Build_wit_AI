@@ -1,0 +1,76 @@
+name: Security Validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  functions:
+    name: Functions and Firebase Rules
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Setup Java for Firebase emulators
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Lint Functions
+        working-directory: functions
+        run: npm run lint
+
+      - name: Run Functions unit tests
+        working-directory: functions
+        run: npm test
+
+      - name: Run Firebase security rules tests
+        working-directory: functions
+        run: npm run test:rules
+
+      - name: Audit Functions production dependencies
+        working-directory: functions
+        # Non-blocking: known moderate Firebase/Google dependency-chain advisories
+        # are documented in docs/SECURITY_HARDENING.md.
+        run: npm audit --omit=dev || true
+
+  mcp:
+    name: MCP Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - name: Install MCP dependencies
+        working-directory: mcp
+        run: npm ci
+
+      - name: Lint MCP
+        working-directory: mcp
+        run: npm run lint
+
+      - name: Audit MCP production dependencies
+        working-directory: mcp
+        run: npm run audit:prod

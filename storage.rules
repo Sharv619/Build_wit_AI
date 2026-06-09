@@ -6,27 +6,49 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function userPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function userExists() {
+      return signedIn() && firestore.exists(userPath());
+    }
+
+    function isHouseholdMember(householdId) {
+      return userExists() &&
+        firestore.get(userPath()).data.householdId == householdId &&
+        firestore.get(userPath()).data.role in ['senior', 'spouse', 'caregiver', 'family'];
+    }
+
+    function isCaregiverFor(householdId) {
+      return isHouseholdMember(householdId) &&
+        firestore.get(userPath()).data.role in ['caregiver', 'family'];
+    }
+
+    function isAudioUpload() {
+      return request.resource != null &&
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('audio/.*');
+    }
+
     match /scriptUploads/{householdId}/{fileName} {
-      // Demo-only script upload path. Production should verify the signed-in user is
-      // linked to this household before allowing reads or writes.
-      allow read: if signedIn()
-        && householdId == 'demo-household-eleanor';
-      allow write: if signedIn()
-        && householdId == 'demo-household-eleanor'
-        && request.resource.size < 10 * 1024 * 1024;
+      allow read: if isCaregiverFor(householdId);
+      allow create, update: if isCaregiverFor(householdId) &&
+        request.resource != null &&
+        request.resource.size < 10 * 1024 * 1024;
+      allow delete: if false;
     }
 
     match /households/{householdId}/voiceReminders/{fileName} {
-      // Demo/MVP recorded family voice reminders only. Production should verify
-      // household membership, consent records, speaker ownership, and delete flows.
-      allow read: if signedIn()
-        && householdId == 'demo-household-eleanor';
-      allow write: if signedIn()
-        && householdId == 'demo-household-eleanor'
-        && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType.matches('audio/.*');
-      allow delete: if signedIn()
-        && householdId == 'demo-household-eleanor';
+      allow read: if isHouseholdMember(householdId);
+      allow create, update: if isCaregiverFor(householdId) && isAudioUpload();
+      allow delete: if isCaregiverFor(householdId);
+    }
+
+    match /households/{householdId}/voiceCloneSamples/{fileName} {
+      // Voice cloning is disabled in this patch batch. Do not accept biometric-like
+      // voice samples until consent, retention, deletion, and audit controls exist.
+      allow read, write: if false;
     }
 
     match /{allPaths=**} {

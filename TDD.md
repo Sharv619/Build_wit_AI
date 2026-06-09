@@ -29,10 +29,13 @@ The backend owns event-based medication reminders, medication response logging, 
 ```ts
 type MedicationStatus =
   | "pending"
-  | "taken"
+  | "pending_confirmation"
+  | "taken_confirmed"
   | "snoozed"
   | "missed"
   | "refused"
+  | "skipped_confirmed"
+  | "unknown"
   | "help_requested";
 
 type ResponseMethod = "button" | "voice" | "typed" | "system";
@@ -128,6 +131,7 @@ interface NotificationEvent {
 - Gemini calls run only in Cloud Functions, never directly in the Stitch frontend.
 - If Gemini is unavailable, deterministic keyword fallback must classify responses.
 - Urgent phrases such as chest pain, cannot breathe, fell, dizzy, or emergency must return static emergency guidance and log `help_requested`.
+- Taken/skipped responses must not be logged as confirmed without explicit user confirmation.
 - Backend-generated text must never provide dosage, diagnosis, skip-dose, or extra-dose advice.
 
 ## Event-Based Missed-Dose Logic

@@ -6,28 +6,27 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isDemoHousehold(householdId) {
-      return householdId == 'demo-household-eleanor';
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
     }
 
-    // Demo-only escape hatch for public hackathon data. Production must remove
-    // unauthenticated demo access and require explicit household membership.
-    function isDemoReadableHousehold(householdId) {
-      return isDemoHousehold(householdId);
+    function userExists(uid) {
+      return exists(userPath(uid));
     }
 
     function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid));
+      return get(userPath(uid));
     }
 
-    function householdIdFor(uid) {
-      return userDoc(uid).data.householdId;
+    function validRole(role) {
+      return role in ['senior', 'spouse', 'caregiver', 'family'];
     }
 
     function isLinkedToHousehold(householdId) {
       return signedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        householdIdFor(request.auth.uid) == householdId;
+        userExists(request.auth.uid) &&
+        userDoc(request.auth.uid).data.householdId == householdId &&
+        validRole(userDoc(request.auth.uid).data.role);
     }
 
     function isCaregiverFor(householdId) {
@@ -35,80 +34,120 @@ service cloud.firestore {
         userDoc(request.auth.uid).data.role in ['caregiver', 'family'];
     }
 
+    function userInHousehold(userId, householdId) {
+      return exists(userPath(userId)) &&
+        userDoc(userId).data.householdId == householdId &&
+        validRole(userDoc(userId).data.role);
+    }
+
+    function onlyChanged(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function immutableOwnership() {
+      return request.resource.data.householdId == resource.data.householdId &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validUserCreate() {
+      return request.resource.data.keys().hasAll(['householdId', 'name', 'role', 'createdAt']) &&
+        request.resource.data.keys().hasOnly(['householdId', 'name', 'role', 'age', 'contact', 'createdAt', 'updatedAt']) &&
+        request.resource.data.role in ['senior', 'spouse', 'family'];
+    }
+
+    function validMedicationCreate() {
+      return request.resource.data.keys().hasAll(['householdId', 'userId', 'name', 'dose', 'instructions', 'source', 'eventTriggers', 'active', 'createdBy', 'createdAt', 'updatedAt']) &&
+        request.resource.data.keys().hasOnly(['householdId', 'userId', 'name', 'dose', 'instructions', 'source', 'eventTriggers', 'active', 'createdBy', 'createdAt', 'updatedAt']) &&
+        request.resource.data.createdBy == request.auth.uid &&
+        userInHousehold(request.resource.data.userId, request.resource.data.householdId) &&
+        request.resource.data.source in ['webster_pack', 'temporary_post_hospital', 'antibiotic', 'other'] &&
+        request.resource.data.active is bool;
+    }
+
     match /users/{userId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || signedIn() && (
+      allow read: if signedIn() && (
         request.auth.uid == userId ||
-        householdIdFor(request.auth.uid) == resource.data.householdId
+        isLinkedToHousehold(resource.data.householdId)
       );
-      allow create: if request.resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
-        request.auth.uid == userId ||
-        isCaregiverFor(request.resource.data.householdId)
-      );
-      allow update: if resource.data.householdId == 'demo-household-eleanor' || signedIn() && (
-        request.auth.uid == userId ||
-        isCaregiverFor(resource.data.householdId)
-      );
+
+      // Initial membership and role assignment must be provisioned by a trusted
+      // backend/admin path. Clients cannot create or update their own role or
+      // household membership.
+      allow create: if signedIn() &&
+        request.auth.uid != userId &&
+        validUserCreate() &&
+        isCaregiverFor(request.resource.data.householdId);
+
+      allow update: if signedIn() &&
+        resource.data.householdId == request.resource.data.householdId &&
+        resource.data.role == request.resource.data.role &&
+        validRole(resource.data.role) &&
+        (
+          request.auth.uid == userId ||
+          isCaregiverFor(resource.data.householdId)
+        ) &&
+        onlyChanged(['name', 'contact', 'updatedAt']);
+
       allow delete: if false;
     }
 
     match /households/{householdId} {
-      allow read: if isDemoReadableHousehold(householdId) || isLinkedToHousehold(householdId);
-      allow create: if isDemoHousehold(householdId) || signedIn() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isDemoHousehold(householdId) || isCaregiverFor(householdId);
+      allow read: if isLinkedToHousehold(householdId);
+      allow create: if false;
+      allow update: if isCaregiverFor(householdId) &&
+        onlyChanged(['name', 'updatedAt']);
       allow delete: if false;
     }
 
     match /medications/{medicationId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
-      allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create: if signedIn() &&
+        validMedicationCreate() &&
+        isCaregiverFor(request.resource.data.householdId);
+      allow update: if isCaregiverFor(resource.data.householdId) &&
+        immutableOwnership() &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.keys().hasOnly(['householdId', 'userId', 'name', 'dose', 'instructions', 'source', 'eventTriggers', 'active', 'createdBy', 'createdAt', 'updatedAt']);
       allow delete: if false;
     }
 
     match /routineEvents/{eventId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Prefer Cloud Functions when billing allows it. The demo household keeps a
-      // Spark-plan fallback so the hosted portfolio demo works without Functions.
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
-      allow update: if isLinkedToHousehold(resource.data.householdId);
-      allow delete: if false;
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, update, delete: if false;
     }
 
     match /medicationLogs/{logId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Prefer backend-owned logging. The demo household keeps a Spark-plan
-      // fallback for portfolio hosting without billable Cloud Functions.
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
-      allow update, delete: if false;
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, update, delete: if false;
     }
 
     match /notifications/{notificationId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Prefer server-owned alerts. The demo household keeps a Spark-plan fallback.
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isLinkedToHousehold(request.resource.data.householdId);
-      allow update: if isLinkedToHousehold(resource.data.householdId);
-      allow delete: if false;
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, delete: if false;
+      allow update: if isLinkedToHousehold(resource.data.householdId) &&
+        request.resource.data.householdId == resource.data.householdId &&
+        onlyChanged(['status', 'acknowledgedAt']) &&
+        request.resource.data.status == 'acknowledged';
     }
 
     match /scriptUploads/{uploadId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      allow create: if isDemoHousehold(request.resource.data.householdId) || isCaregiverFor(request.resource.data.householdId);
-      allow update: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
-      allow delete: if false;
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, update, delete: if false;
     }
 
     match /voiceReminders/{voiceReminderId} {
-      allow read: if isDemoReadableHousehold(resource.data.householdId) || isLinkedToHousehold(resource.data.householdId);
-      // Demo/MVP recorded voice reminders. Production should enforce caregiver consent,
-      // household membership, file ownership, deletion audit trails, and senior opt-out.
-      allow create: if (
-        isDemoHousehold(request.resource.data.householdId) ||
-        isCaregiverFor(request.resource.data.householdId)
-      ) &&
-        request.resource.data.consentConfirmed == true &&
-        request.resource.data.messageType == 'recorded';
-      allow update: if false;
-      allow delete: if isDemoHousehold(resource.data.householdId) || isCaregiverFor(resource.data.householdId);
+      allow read: if isLinkedToHousehold(resource.data.householdId);
+      allow create, update, delete: if false;
+    }
+
+    match /voiceClones/{voiceCloneId} {
+      allow read: if isCaregiverFor(resource.data.householdId);
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Intent, RefusalReason } from "./types";
 
-const urgentTerms = ["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency"];
+const urgentTerms = ["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency", "call someone", "need help"];
 const takenTerms = ["took", "taken", "done", "yes", "completed", "had it"];
 const snoozeTerms = ["later", "remind", "snooze", "wait"];
 const refusedTerms = ["do not want", "don't want", "refuse", "side effect", "not taking", "no"];
@@ -14,7 +14,7 @@ export interface ClassifiedResponse {
 }
 
 export function classifyFallback(text: string): ClassifiedResponse {
-  const normalized = text.toLowerCase();
+  const normalized = text.toLowerCase().replace(/\u2018|\u2019/g, "'");
   const intent = termMatch(normalized, urgentTerms)
     ? "urgent"
     : termMatch(normalized, takenTerms)
@@ -36,9 +36,14 @@ export function classifyFallback(text: string): ClassifiedResponse {
 }
 
 export async function classifyWithGemini(text: string): Promise<ClassifiedResponse> {
+  const fallback = classifyFallback(text);
+  if (fallback.intent === "urgent") {
+    return fallback;
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return classifyFallback(text);
+    return fallback;
   }
 
   try {
@@ -83,7 +88,6 @@ export async function classifyWithGemini(text: string): Promise<ClassifiedRespon
     }
 
     const parsed = JSON.parse(raw) as { intent?: Intent; refusalReason?: RefusalReason };
-    const fallback = classifyFallback(text);
     const intent = isIntent(parsed.intent) ? parsed.intent : fallback.intent;
     return {
       intent,

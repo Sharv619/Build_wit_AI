@@ -12,6 +12,38 @@ The first pass should use Firebase directly:
 
 The Stitch frontend will be added later and should consume the Firebase contract.
 
+## Local MCP Server
+This repository now includes a local stdio MCP server in `mcp/`.
+
+The server is intentionally demo/dev scoped:
+- Exposes project documentation as MCP resources.
+- Provides deterministic helper tools for reminder copy, missed-dose copy, demo seed data, script text candidate extraction, and medication payload validation.
+- Tracks frontend screen artifacts so future app work can consider the full `FRONT_END` folder, not only `FRONT_END/app`.
+- Voice cloning is now an optional explicit-consent backend path, not a silent impersonation feature.
+- Does not connect to Firebase.
+- Does not store medical data.
+- Does not call external AI services.
+
+Setup:
+```bash
+cd mcp
+npm install
+npm run build
+npm start
+```
+
+Example MCP client config:
+```json
+{
+  "mcpServers": {
+    "pilly": {
+      "command": "node",
+      "args": ["C:/Users/Hlade/Documents/Build_Wit_AI/mcp/lib/index.js"]
+    }
+  }
+}
+```
+
 ## Potential MCP Integrations
 
 ### Documentation MCP
@@ -57,10 +89,12 @@ Use an issue tracker MCP to sync implementation tasks from `TASKS.md` into proje
 - MCP should not enable real location tracking without explicit informed consent.
 
 ## Future MCP Tasks
+- [x] Add local project documentation MCP resources.
+- [x] Add connected Mobile Demo routes for existing `FRONT_END` screen artifacts.
+- [x] Add Eleanor seed-data utility.
+- [x] Add script upload extraction exploration.
 - [ ] Add Firebase documentation lookup flow.
 - [ ] Add Firebase emulator test workflow.
-- [ ] Add Eleanor seed-data utility.
-- [ ] Add script upload extraction exploration.
 - [ ] Add leaving-home event simulation checks.
 - [ ] Add browser automation workflow after Stitch frontend is connected.
 - [ ] Add issue tracker sync for implementation tasks.

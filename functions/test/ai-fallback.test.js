@@ -5,6 +5,9 @@ const {
   classifyFallback,
   classifyWithGemini,
 } = require("../lib/ai");
+const {
+  resolveMedicationStatusForTest,
+} = require("../lib/index");
 
 test("fallback classifies refusal and captures reason", () => {
   const result = classifyFallback("I don't want to take it because of side effects");
@@ -22,6 +25,23 @@ test("fallback classifies urgent phrases with static safety message", () => {
   assert.equal(result.source, "fallback");
   assert.match(result.safeMessage, /Call emergency services now/i);
   assert.match(result.safeMessage, /does not provide medical advice/i);
+});
+
+test("fallback classifies help phrases before taken language", () => {
+  const result = classifyFallback("I took it but I fell and need help");
+
+  assert.equal(result.intent, "urgent");
+  assert.match(result.safeMessage, /Call emergency services now/i);
+});
+
+test("backend status resolution requires confirmation for taken responses", () => {
+  assert.equal(resolveMedicationStatusForTest("taken", false), "pending_confirmation");
+  assert.equal(resolveMedicationStatusForTest("taken", true), "taken_confirmed");
+});
+
+test("backend status resolution maps urgent and caregiver attention to help requested", () => {
+  assert.equal(resolveMedicationStatusForTest("urgent", true), "help_requested");
+  assert.equal(resolveMedicationStatusForTest("caregiver_attention", true), "help_requested");
 });
 
 test("Gemini classifier falls back when no API key is configured", async () => {

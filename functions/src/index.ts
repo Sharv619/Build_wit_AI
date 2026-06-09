@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import textToSpeech = require("@google-cloud/text-to-speech");
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import type { CallableRequest } from "firebase-functions/v2/https";
 import { classifyFallback, classifyWithGemini, missedDoseCopy, reminderCopy } from "./ai";
 import {
   Medication,
@@ -11,47 +12,60 @@ import {
   RefusalReason,
   ResponseMethod,
   RoutineEvent,
+  UserRole,
 } from "./types";
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const storage = admin.storage();
-const finalStatuses: MedicationStatus[] = ["taken", "snoozed", "refused", "help_requested", "missed"];
+const finalStatuses: MedicationStatus[] = ["taken_confirmed", "skipped_confirmed", "refused", "help_requested", "missed"];
 const defaultChirpVoice = "en-US-Chirp3-HD-Charon";
 let ttsClient: textToSpeech.TextToSpeechClient | undefined;
 
+interface HouseholdMember {
+  uid: string;
+  householdId: string;
+  role: UserRole;
+}
+
 export const classifyMedicationResponse = onCall(async (request) => {
+  await requireAuth(request);
   const text = stringField(request.data, "text");
   const result = await classifyWithGemini(text);
   return result;
 });
 
 export const recordMedicationResponse = onCall(async (request) => {
-  const userId = targetUserId(request);
-  const householdId = stringField(request.data, "householdId");
+  const uid = await requireAuth(request);
   const medicationId = stringField(request.data, "medicationId");
-  const responseMethod = enumField<ResponseMethod>(request.data, "responseMethod", ["button", "voice", "typed", "system"]);
+  const { id: verifiedMedicationId, data: medication } = await requireMedication(medicationId);
+  assertProvidedHouseholdMatches(request.data, medication.householdId);
+  await requireHouseholdMember(uid, medication.householdId);
+  const responseMethod = enumField<ResponseMethod>(request.data, "responseMethod", ["button", "voice", "typed"]);
   const responseText = optionalString(request.data.responseText);
   const routineEventId = optionalString(request.data.routineEventId);
+  if (routineEventId) {
+    await requireRoutineEvent(routineEventId, medication.householdId, medication.userId);
+  }
+  const confirmed = optionalBoolean(request.data.confirmed) === true;
 
   const classified = responseText
     ? await classifyWithGemini(responseText)
-    : classifyFallback(String(request.data.status ?? ""));
+    : classifyFallback("");
 
-  const requestedStatus = optionalString(request.data.status) as MedicationStatus | undefined;
-  const status = normalizeStatus(requestedStatus, classified.intent);
+  const status = resolveMedicationStatus(classified.intent, confirmed);
   const refusalReason = normalizeRefusalReason(request.data.refusalReason) ?? classified.refusalReason;
 
   const log: MedicationLog = {
-    householdId,
-    medicationId,
+    householdId: medication.householdId,
+    medicationId: verifiedMedicationId,
     routineEventId,
-    userId,
+    userId: medication.userId,
     status,
     responseMethod,
     responseText,
-    refusalReason: status === "refused" ? refusalReason ?? "other" : undefined,
+    refusalReason: status === "skipped_confirmed" || status === "refused" ? refusalReason ?? "other" : undefined,
     refusalNote: optionalString(request.data.refusalNote),
     createdAt: now(),
   };
@@ -67,12 +81,17 @@ export const recordMedicationResponse = onCall(async (request) => {
 });
 
 export const completeRoutineEvent = onCall(async (request) => {
-  const userId = targetUserId(request);
+  const uid = await requireAuth(request);
   const householdId = stringField(request.data, "householdId");
+  const member = await requireHouseholdMember(uid, householdId);
+  const userId = await targetSeniorIdForHousehold(householdId, member);
   const trigger = enumField<MedicationEventTrigger>(request.data, "trigger", eventTriggers());
   const status = enumField<"completed" | "skipped">(request.data, "status", ["completed", "skipped"]);
   const routineEventId = optionalString(request.data.routineEventId);
   const eventRef = routineEventId ? db.collection("routineEvents").doc(routineEventId) : db.collection("routineEvents").doc();
+  if (routineEventId) {
+    await requireRoutineEvent(routineEventId, householdId, userId);
+  }
 
   const event: RoutineEvent = {
     householdId,
@@ -97,8 +116,10 @@ export const completeRoutineEvent = onCall(async (request) => {
 });
 
 export const simulateLeavingHome = onCall(async (request) => {
-  const userId = targetUserId(request);
+  const uid = await requireAuth(request);
   const householdId = stringField(request.data, "householdId");
+  const member = await requireHouseholdMember(uid, householdId);
+  const userId = await targetSeniorIdForHousehold(householdId, member);
   const eventRef = await db.collection("routineEvents").add({
     householdId,
     userId,
@@ -133,6 +154,7 @@ export const simulateLeavingHome = onCall(async (request) => {
 });
 
 export const generateReminderCopy = onCall(async (request) => {
+  await requireAuth(request);
   const medicationName = stringField(request.data, "medicationName");
   const dose = stringField(request.data, "dose");
   const trigger = stringField(request.data, "trigger");
@@ -140,18 +162,22 @@ export const generateReminderCopy = onCall(async (request) => {
 });
 
 export const generateMissedDoseAlert = onCall(async (request) => {
+  await requireAuth(request);
   const medicationName = stringField(request.data, "medicationName");
   const trigger = stringField(request.data, "trigger");
   return { message: missedDoseCopy(medicationName, trigger) };
 });
 
 export const generateChirpReminderAudio = onCall(async (request) => {
-  const userId = targetUserId(request);
-  const householdId = stringField(request.data, "householdId");
+  const uid = await requireAuth(request);
   const medicationId = stringField(request.data, "medicationId");
-  const medicationName = stringField(request.data, "medicationName");
-  const dose = stringField(request.data, "dose");
+  const { id: verifiedMedicationId, data: medication } = await requireMedication(medicationId);
+  assertProvidedHouseholdMatches(request.data, medication.householdId);
+  await requireHouseholdRole(uid, medication.householdId, ["caregiver", "family"]);
   const trigger = enumField<MedicationEventTrigger>(request.data, "trigger", eventTriggers());
+  if (!medication.eventTriggers.includes(trigger)) {
+    throw new HttpsError("failed-precondition", "Medication is not configured for the requested reminder trigger.");
+  }
   const voiceName = optionalString(request.data.voiceName) ?? defaultChirpVoice;
   const syntheticVoiceAcknowledged = booleanField(request.data, "syntheticVoiceAcknowledged");
 
@@ -159,7 +185,7 @@ export const generateChirpReminderAudio = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Synthetic voice acknowledgement is required.");
   }
 
-  const message = reminderCopy(medicationName, dose, trigger);
+  const message = reminderCopy(medication.name, medication.dose, trigger);
   const [response] = await textToSpeechClient().synthesizeSpeech({
     input: { text: message },
     voice: {
@@ -176,15 +202,15 @@ export const generateChirpReminderAudio = onCall(async (request) => {
   }
 
   const voiceReminderRef = db.collection("voiceReminders").doc();
-  const storagePath = `households/${householdId}/voiceReminders/${voiceReminderRef.id}.mp3`;
+  const storagePath = `households/${medication.householdId}/voiceReminders/${voiceReminderRef.id}.mp3`;
   const file = storage.bucket().file(storagePath);
 
   await file.save(Buffer.from(response.audioContent as Uint8Array), {
     contentType: "audio/mpeg",
     metadata: {
       metadata: {
-        householdId,
-        medicationId,
+        householdId: medication.householdId,
+        medicationId: verifiedMedicationId,
         routineEventTrigger: trigger,
         messageType: "chirp3_hd",
         voiceName,
@@ -193,9 +219,9 @@ export const generateChirpReminderAudio = onCall(async (request) => {
   });
 
   await voiceReminderRef.set({
-    userId,
-    householdId,
-    medicationId,
+    userId: medication.userId,
+    householdId: medication.householdId,
+    medicationId: verifiedMedicationId,
     routineEventId: trigger,
     routineEventTrigger: trigger,
     speakerName: "Pilly Chirp voice",
@@ -219,14 +245,29 @@ export const generateChirpReminderAudio = onCall(async (request) => {
   };
 });
 
-export const processScriptUpload = onCall(async (request) => {
-  const userId = actorId(request);
+export const createElevenLabsVoiceClone = onCall(async (request) => {
+  const uid = await requireAuth(request);
   const householdId = stringField(request.data, "householdId");
+  await requireHouseholdRole(uid, householdId, ["caregiver", "family"]);
+  throw new HttpsError("failed-precondition", "Voice cloning is disabled until production-grade consent, retention, deletion, and audit controls are implemented.");
+});
+
+export const generateClonedVoiceReminderAudio = onCall(async (request) => {
+  const uid = await requireAuth(request);
+  const householdId = stringField(request.data, "householdId");
+  await requireHouseholdRole(uid, householdId, ["caregiver", "family"]);
+  throw new HttpsError("failed-precondition", "Cloned voice reminders are disabled until production-grade voice safety controls are implemented.");
+});
+
+export const processScriptUpload = onCall(async (request) => {
+  const uid = await requireAuth(request);
+  const householdId = stringField(request.data, "householdId");
+  await requireHouseholdRole(uid, householdId, ["caregiver", "family"]);
   const text = stringField(request.data, "text");
   const candidates = extractMedicationCandidates(text);
   const doc = await db.collection("scriptUploads").add({
     householdId,
-    caregiverId: userId,
+    caregiverId: uid,
     source: "pasted_text",
     status: "needs_confirmation",
     text,
@@ -237,7 +278,8 @@ export const processScriptUpload = onCall(async (request) => {
   return { uploadId: doc.id, candidates };
 });
 
-export const seedDemoData = onCall(async () => {
+export const seedDemoData = onCall(async (request) => {
+  requireAdminClaim(request);
   const householdId = "demo-household-eleanor";
   const eleanorId = "demo-eleanor";
   const caregiverId = "demo-caregiver";
@@ -361,6 +403,95 @@ async function createNotification(data: NotificationEvent) {
   return db.collection("notifications").add(removeUndefined(data));
 }
 
+async function requireAuth(request: CallableRequest<unknown>): Promise<string> {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication is required.");
+  }
+  return uid;
+}
+
+function requireAdminClaim(request: CallableRequest<unknown>): string {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication is required.");
+  }
+  if (request.auth?.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin access is required.");
+  }
+  return uid;
+}
+
+async function requireHouseholdMember(uid: string, householdId: string): Promise<HouseholdMember> {
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) {
+    throw new HttpsError("permission-denied", "No household membership was found for this user.");
+  }
+
+  const data = userDoc.data() as { householdId?: unknown; role?: unknown };
+  if (data.householdId !== householdId || !isUserRole(data.role)) {
+    throw new HttpsError("permission-denied", "This user is not authorized for the requested household.");
+  }
+
+  return { uid, householdId, role: data.role };
+}
+
+async function requireHouseholdRole(uid: string, householdId: string, allowedRoles: UserRole[]): Promise<HouseholdMember> {
+  const member = await requireHouseholdMember(uid, householdId);
+  if (!allowedRoles.includes(member.role)) {
+    throw new HttpsError("permission-denied", "This action requires a caregiver or family role.");
+  }
+  return member;
+}
+
+async function targetSeniorIdForHousehold(householdId: string, member: HouseholdMember): Promise<string> {
+  const householdDoc = await db.collection("households").doc(householdId).get();
+  if (!householdDoc.exists) {
+    throw new HttpsError("not-found", "Household not found.");
+  }
+
+  const primarySeniorId = householdDoc.data()?.primarySeniorId;
+  if (typeof primarySeniorId === "string" && primarySeniorId.trim()) {
+    return primarySeniorId.trim();
+  }
+  return member.uid;
+}
+
+async function requireMedication(medicationId: string): Promise<{ id: string; data: Medication }> {
+  const medicationDoc = await db.collection("medications").doc(medicationId).get();
+  if (!medicationDoc.exists) {
+    throw new HttpsError("not-found", "Medication not found.");
+  }
+
+  const medication = medicationDoc.data() as Medication;
+  if (!medication.householdId || !medication.userId) {
+    throw new HttpsError("failed-precondition", "Medication is missing household ownership fields.");
+  }
+
+  return { id: medicationDoc.id, data: medication };
+}
+
+async function requireRoutineEvent(routineEventId: string, householdId: string, userId: string): Promise<RoutineEvent> {
+  const eventDoc = await db.collection("routineEvents").doc(routineEventId).get();
+  if (!eventDoc.exists) {
+    throw new HttpsError("not-found", "Routine event not found.");
+  }
+
+  const event = eventDoc.data() as RoutineEvent;
+  if (event.householdId !== householdId || event.userId !== userId) {
+    throw new HttpsError("permission-denied", "Routine event does not belong to the verified household and senior.");
+  }
+
+  return event;
+}
+
+function assertProvidedHouseholdMatches(data: unknown, verifiedHouseholdId: string): void {
+  const providedHouseholdId = optionalString(isRecord(data) ? data.householdId : undefined);
+  if (providedHouseholdId && providedHouseholdId !== verifiedHouseholdId) {
+    throw new HttpsError("permission-denied", "Requested household does not match the verified record owner.");
+  }
+}
+
 function extractMedicationCandidates(text: string) {
   return text
     .split(/\n|;/)
@@ -374,18 +505,6 @@ function extractMedicationCandidates(text: string) {
       source: line.toLowerCase().includes("antibiotic") ? "antibiotic" : "other",
       eventTriggers: [] as MedicationEventTrigger[],
     }));
-}
-
-function actorId(request: { auth?: { uid?: string }; data: unknown }): string {
-  if (request.auth?.uid) return request.auth.uid;
-  return stringField(request.data, "userId");
-}
-
-function targetUserId(request: { auth?: { uid?: string }; data: unknown }): string {
-  // Demo bridge: callable functions may be invoked by an anonymous caregiver session
-  // while the medication workflow is for Eleanor. Production should enforce caregiver
-  // household membership before honoring a separate target user id.
-  return optionalString(isRecord(request.data) ? request.data.userId : undefined) ?? actorId(request);
 }
 
 async function hasRecentDemoFinalLog(householdId: string, userId: string, medicationId: string): Promise<boolean> {
@@ -415,6 +534,10 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function optionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function enumField<T extends string>(data: unknown, field: string, allowed: readonly T[]): T {
   const value = stringField(data, field);
   if (!allowed.includes(value as T)) {
@@ -435,11 +558,34 @@ function textToSpeechClient(): textToSpeech.TextToSpeechClient {
   return ttsClient;
 }
 
-function normalizeStatus(status: MedicationStatus | undefined, intent: string): MedicationStatus {
-  if (status && finalStatuses.includes(status)) return status;
+function resolveMedicationStatus(intent: string, confirmed: boolean): MedicationStatus {
   if (intent === "urgent") return "help_requested";
   if (intent === "caregiver_attention") return "help_requested";
-  return intent as MedicationStatus;
+  if (intent === "help_requested") return "help_requested";
+  if (intent === "taken") return confirmed ? "taken_confirmed" : "pending_confirmation";
+  if (intent === "refused") return confirmed ? "skipped_confirmed" : "pending_confirmation";
+  if (intent === "snoozed") return "pending_confirmation";
+  return "unknown";
+}
+
+export function resolveMedicationStatusForTest(intent: string, confirmed: boolean): MedicationStatus {
+  return resolveMedicationStatus(intent, confirmed);
+}
+
+export async function requireAuthForTest(request: CallableRequest<unknown>): Promise<string> {
+  return requireAuth(request);
+}
+
+export function requireAdminClaimForTest(request: CallableRequest<unknown>): string {
+  return requireAdminClaim(request);
+}
+
+export async function requireHouseholdMemberForTest(uid: string, householdId: string): Promise<HouseholdMember> {
+  return requireHouseholdMember(uid, householdId);
+}
+
+export async function requireHouseholdRoleForTest(uid: string, householdId: string, allowedRoles: UserRole[]): Promise<HouseholdMember> {
+  return requireHouseholdRole(uid, householdId, allowedRoles);
 }
 
 function normalizeRefusalReason(value: unknown): RefusalReason | undefined {
@@ -449,6 +595,10 @@ function normalizeRefusalReason(value: unknown): RefusalReason | undefined {
 
 function eventTriggers(): MedicationEventTrigger[] {
   return ["breakfast", "lunch", "dinner", "bedtime", "leaving_home", "post_discharge", "caregiver_check_in"];
+}
+
+function isUserRole(value: unknown): value is UserRole {
+  return typeof value === "string" && ["senior", "spouse", "caregiver", "family"].includes(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

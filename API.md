@@ -115,6 +115,51 @@ Response:
 }
 ```
 
+### `createElevenLabsVoiceClone`
+Creates an explicit-consent ElevenLabs Instant Voice Clone from a caregiver-uploaded audio sample in Firebase Storage. Requires `ELEVENLABS_API_KEY` on the Cloud Functions runtime.
+
+Request:
+```json
+{
+  "userId": "demo-caregiver",
+  "householdId": "demo-household-eleanor",
+  "speakerName": "Sarah",
+  "relationship": "daughter",
+  "sampleStoragePath": "households/demo-household-eleanor/voiceCloneSamples/sample.webm",
+  "speakerConsentConfirmed": true,
+  "voiceCloneConsentConfirmed": true,
+  "syntheticVoiceAcknowledged": true
+}
+```
+
+Response:
+```json
+{
+  "voiceCloneId": "VOICE_CLONE_DOC_ID",
+  "provider": "elevenlabs",
+  "providerVoiceId": "ELEVENLABS_VOICE_ID",
+  "requiresVerification": false,
+  "status": "ready"
+}
+```
+
+### `generateClonedVoiceReminderAudio`
+Generates medication reminder audio from a consented voice clone, saves the MP3 to Firebase Storage, and stores `voiceReminders` metadata with `messageType: "elevenlabs_voice_clone"`.
+
+Request:
+```json
+{
+  "userId": "demo-eleanor",
+  "householdId": "demo-household-eleanor",
+  "medicationId": "MEDICATION_DOC_ID",
+  "medicationName": "Post-hospital antibiotic",
+  "dose": "1 tablet",
+  "trigger": "lunch",
+  "voiceCloneId": "VOICE_CLONE_DOC_ID",
+  "syntheticVoiceAcknowledged": true
+}
+```
+
 ### `processScriptUpload`
 Request:
 ```json
