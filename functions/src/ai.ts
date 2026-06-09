@@ -1,9 +1,13 @@
 import { Intent, RefusalReason } from "./types";
 
+<<<<<<< HEAD
 const urgentTerms = ["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency", "call someone", "need help"];
+=======
+const urgentTerms = ["chest pain", "cannot breathe", "can't breathe", "fell", "dizzy", "emergency", "severe pain", "passed out"];
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 const takenTerms = ["took", "taken", "done", "yes", "completed", "had it"];
 const snoozeTerms = ["later", "remind", "snooze", "wait"];
-const refusedTerms = ["do not want", "don't want", "refuse", "side effect", "not taking", "no"];
+const refusedTerms = ["do not want", "don't want", "refuse", "side effect", "not taking", "no", "do not understand", "don't understand"];
 const helpTerms = ["help", "call", "caregiver", "need someone"];
 
 export interface ClassifiedResponse {
@@ -25,7 +29,7 @@ export function classifyFallback(text: string): ClassifiedResponse {
           ? "refused"
           : termMatch(normalized, helpTerms)
             ? "help_requested"
-            : "caregiver_attention";
+            : "unknown";
 
   return {
     intent,
@@ -60,8 +64,8 @@ export async function classifyWithGemini(text: string): Promise<ClassifiedRespon
                   text: [
                     "Classify this senior medication response.",
                     "Return only compact JSON with intent and optional refusalReason.",
-                    "Allowed intent values: taken, snoozed, refused, help_requested, caregiver_attention, urgent.",
-                    "Allowed refusalReason values: away_from_medicine, side_effects, feeling_unwell, confused, other.",
+                    "Allowed intent values: taken, snoozed, refused, help_requested, unknown, urgent.",
+                    "Allowed refusalReason values: away_from_medicine, side_effects, feeling_unwell, confused, does_not_understand, other, unknown.",
                     "Do not give medical advice.",
                     `Response: ${text}`,
                   ].join("\n"),
@@ -118,8 +122,9 @@ function formatTrigger(trigger: string): string {
 
 function refusalReasonFallback(text: string): RefusalReason {
   if (text.includes("away") || text.includes("not home") || text.includes("left")) return "away_from_medicine";
-  if (text.includes("side effect") || text.includes("sick")) return "side_effects";
-  if (text.includes("unwell") || text.includes("nause") || text.includes("bad")) return "feeling_unwell";
+  if (text.includes("side effect")) return "side_effects";
+  if (text.includes("sick") || text.includes("unwell") || text.includes("nause") || text.includes("bad")) return "feeling_unwell";
+  if (text.includes("do not understand") || text.includes("don't understand")) return "does_not_understand";
   if (text.includes("confus") || text.includes("not sure")) return "confused";
   return "other";
 }
@@ -134,12 +139,15 @@ function safeMessageForIntent(intent: Intent): string {
   if (intent === "help_requested") {
     return "I have recorded that Eleanor needs help and the caregiver dashboard should show this.";
   }
+  if (intent === "unknown") {
+    return "I am not sure how to classify that response. Please check with a caregiver.";
+  }
   return "Response recorded.";
 }
 
 function isIntent(value: unknown): value is Intent {
   return typeof value === "string" &&
-    ["taken", "snoozed", "refused", "help_requested", "caregiver_attention", "urgent"].includes(value);
+    ["taken", "snoozed", "refused", "help_requested", "unknown", "urgent"].includes(value);
 }
 
 interface GeminiResponse {

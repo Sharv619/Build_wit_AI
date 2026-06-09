@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+<<<<<<< HEAD
     "module": "Node16",
     "moduleResolution": "Node16",
     "target": "es2020",
@@ -12,4 +13,18 @@
     "noUnusedLocals": false
   },
   "include": ["src"]
+=======
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": ".",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "typeRoots": ["../functions/node_modules/@types"]
+  },
+  "include": ["server.ts", "tools/**/*.ts", "shared/**/*.ts"]
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 }

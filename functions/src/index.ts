@@ -3,6 +3,8 @@ import textToSpeech = require("@google-cloud/text-to-speech");
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { classifyFallback, classifyWithGemini, missedDoseCopy, reminderCopy } from "./ai";
+import { writeMedicationResponse } from "./core/record-response";
+import { leavingHomeReminderMessage } from "./core/workflow";
 import {
   Medication,
   MedicationEventTrigger,
@@ -45,10 +47,14 @@ export const recordMedicationResponse = onCall(async (request) => {
   const responseMethod = enumField<ResponseMethod>(request.data, "responseMethod", ["button", "voice", "typed"]);
   const responseText = optionalString(request.data.responseText);
   const routineEventId = optionalString(request.data.routineEventId);
+<<<<<<< HEAD
   if (routineEventId) {
     await requireRoutineEvent(routineEventId, medication.householdId, medication.userId);
   }
   const confirmed = optionalBoolean(request.data.confirmed) === true;
+=======
+  const caregiverId = optionalString(request.data.caregiverId);
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 
   const classified = responseText
     ? await classifyWithGemini(responseText)
@@ -57,6 +63,7 @@ export const recordMedicationResponse = onCall(async (request) => {
   const status = resolveMedicationStatus(classified.intent, confirmed);
   const refusalReason = normalizeRefusalReason(request.data.refusalReason) ?? classified.refusalReason;
 
+<<<<<<< HEAD
   const log: MedicationLog = {
     householdId: medication.householdId,
     medicationId: verifiedMedicationId,
@@ -74,9 +81,31 @@ export const recordMedicationResponse = onCall(async (request) => {
   return {
     logId: doc.id,
     status,
+=======
+  const log = await writeMedicationResponse(db, {
+    householdId,
+    medicationId,
+    userId,
+    caregiverId,
+    routineEventId,
+    status,
+    responseMethod,
+    responseText,
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
     intent: classified.intent,
+    refusalReason,
+    refusalNote: optionalString(request.data.refusalNote),
+    safeMessage: classified.safeMessage,
+    now,
+  });
+
+  return {
+    logId: log.logId,
+    status: log.status,
+    intent: log.intent,
     refusalReason: log.refusalReason,
-    message: classified.safeMessage,
+    message: log.message,
+    notifications: log.notifications,
   };
 });
 
@@ -130,16 +159,13 @@ export const simulateLeavingHome = onCall(async (request) => {
   } satisfies RoutineEvent);
 
   const meds = await medicationsForTrigger(householdId, userId, "leaving_home");
-  const names = meds.map((med) => `${med.data.name} (${med.data.dose})`);
-  const message = names.length
-    ? `Before leaving home, please take these medicines with you: ${names.join(", ")}.`
-    : "Before leaving home, please check whether you need to take any medicine with you.";
+  const message = leavingHomeReminderMessage(meds.map((med) => ({ id: med.id, ...med.data })));
 
   const notification = await createNotification({
     householdId,
     userId,
     routineEventId: eventRef.id,
-    type: "leaving_home_reminder",
+    type: "leaving_home",
     message,
     status: "sent",
     createdAt: now(),
@@ -376,7 +402,7 @@ async function createMissedLogsForEvent(
       userId,
       medicationId: med.id,
       routineEventId,
-      type: "missed_dose_alert",
+      type: "missed_dose",
       message: missedDoseCopy(med.data.name, trigger),
       status: "sent",
       createdAt: now(),
@@ -507,6 +533,22 @@ function extractMedicationCandidates(text: string) {
     }));
 }
 
+<<<<<<< HEAD
+=======
+function actorId(request: { auth?: { uid?: string }; data: unknown }): string {
+  if (request.auth?.uid) return request.auth.uid;
+  return stringField(request.data, "userId");
+}
+
+function targetUserId(request: { auth?: { uid?: string }; data: unknown }): string {
+  // Demo bridge: callable functions may be invoked by an anonymous caregiver session
+  // while the medication workflow is for Eleanor. Production should enforce caregiver
+  // household membership before honoring a separate target user id.
+  if (!isRecord(request.data)) return actorId(request);
+  return optionalString(request.data.seniorId) ?? optionalString(request.data.userId) ?? actorId(request);
+}
+
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 async function hasRecentDemoFinalLog(householdId: string, userId: string, medicationId: string): Promise<boolean> {
   if (householdId !== "demo-household-eleanor") return false;
 
@@ -560,6 +602,7 @@ function textToSpeechClient(): textToSpeech.TextToSpeechClient {
 
 function resolveMedicationStatus(intent: string, confirmed: boolean): MedicationStatus {
   if (intent === "urgent") return "help_requested";
+<<<<<<< HEAD
   if (intent === "caregiver_attention") return "help_requested";
   if (intent === "help_requested") return "help_requested";
   if (intent === "taken") return confirmed ? "taken_confirmed" : "pending_confirmation";
@@ -586,15 +629,18 @@ export async function requireHouseholdMemberForTest(uid: string, householdId: st
 
 export async function requireHouseholdRoleForTest(uid: string, householdId: string, allowedRoles: UserRole[]): Promise<HouseholdMember> {
   return requireHouseholdRole(uid, householdId, allowedRoles);
+=======
+  return intent as MedicationStatus;
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 }
 
 function normalizeRefusalReason(value: unknown): RefusalReason | undefined {
-  const allowed: RefusalReason[] = ["away_from_medicine", "side_effects", "feeling_unwell", "confused", "other"];
+  const allowed: RefusalReason[] = ["away_from_medicine", "side_effects", "feeling_unwell", "confused", "does_not_understand", "other", "unknown"];
   return typeof value === "string" && allowed.includes(value as RefusalReason) ? value as RefusalReason : undefined;
 }
 
 function eventTriggers(): MedicationEventTrigger[] {
-  return ["breakfast", "lunch", "dinner", "bedtime", "leaving_home", "post_discharge", "caregiver_check_in"];
+  return ["breakfast", "lunch", "dinner", "bedtime", "leaving_home", "post_discharge_check_in", "caregiver_check_in"];
 }
 
 function isUserRole(value: unknown): value is UserRole {

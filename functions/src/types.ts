@@ -6,9 +6,14 @@ export type MedicationStatus =
   | "snoozed"
   | "missed"
   | "refused"
+<<<<<<< HEAD
   | "skipped_confirmed"
   | "unknown"
   | "help_requested";
+=======
+  | "help_requested"
+  | "unknown";
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 
 export type ResponseMethod = "button" | "voice" | "typed" | "system";
 
@@ -26,7 +31,7 @@ export type MedicationEventTrigger =
   | "dinner"
   | "bedtime"
   | "leaving_home"
-  | "post_discharge"
+  | "post_discharge_check_in"
   | "caregiver_check_in";
 
 export type RefusalReason =
@@ -34,15 +39,28 @@ export type RefusalReason =
   | "side_effects"
   | "feeling_unwell"
   | "confused"
-  | "other";
+  | "does_not_understand"
+  | "other"
+  | "unknown";
 
 export type Intent =
   | "taken"
   | "snoozed"
   | "refused"
   | "help_requested"
-  | "caregiver_attention"
+  | "unknown"
   | "urgent";
+
+export type NotificationType =
+  | "dose_reminder"
+  | "missed_dose"
+  | "refusal"
+  | "help_requested"
+  | "leaving_home"
+  | "urgent_phrase"
+  | "system";
+
+export type NotificationSeverity = "info" | "warning" | "urgent";
 
 export interface Medication {
   householdId: string;
@@ -84,13 +102,16 @@ export interface MedicationLog {
 export interface NotificationEvent {
   householdId: string;
   userId: string;
+  seniorId?: string;
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
+  type: NotificationType;
+  severity?: NotificationSeverity;
+  title?: string;
   message: string;
+  refusalReason?: RefusalReason;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;
 }
-

@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && node --test",
     "lint": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.js",
     "test:rules": "npm run build && firebase --config ../firebase.json emulators:exec --only firestore,storage \"node --test test/security-rules.test.js test/callable-auth.test.js\"",

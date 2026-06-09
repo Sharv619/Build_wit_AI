@@ -2,6 +2,7 @@
   "name": "pilly-mcp",
   "private": true,
   "version": "0.1.0",
+<<<<<<< HEAD
   "type": "module",
   "bin": {
     "pilly-mcp": "lib/index.js"
@@ -19,5 +20,13 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "typescript": "^5.7.2"
+=======
+  "type": "commonjs",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "../functions/node_modules/.bin/tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "check": "../functions/node_modules/.bin/tsc -p tsconfig.json --noEmit"
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
   }
 }

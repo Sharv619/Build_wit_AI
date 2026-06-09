@@ -34,9 +34,14 @@ type MedicationStatus =
   | "snoozed"
   | "missed"
   | "refused"
+<<<<<<< HEAD
   | "skipped_confirmed"
   | "unknown"
   | "help_requested";
+=======
+  | "help_requested"
+  | "unknown";
+>>>>>>> 1fc2c96a7840bb57dbe9295caf62fd10847b9fc6
 
 type ResponseMethod = "button" | "voice" | "typed" | "system";
 
@@ -54,7 +59,7 @@ type MedicationEventTrigger =
   | "dinner"
   | "bedtime"
   | "leaving_home"
-  | "post_discharge"
+  | "post_discharge_check_in"
   | "caregiver_check_in";
 
 type RefusalReason =
@@ -62,7 +67,9 @@ type RefusalReason =
   | "side_effects"
   | "feeling_unwell"
   | "confused"
-  | "other";
+  | "does_not_understand"
+  | "other"
+  | "unknown";
 
 interface Medication {
   id: string;
@@ -107,11 +114,22 @@ interface NotificationEvent {
   id: string;
   householdId: string;
   userId: string;
+  seniorId?: string;
   caregiverId?: string;
   medicationId?: string;
   routineEventId?: string;
-  type: "dose_reminder" | "missed_dose_alert" | "leaving_home_reminder";
+  type:
+    | "dose_reminder"
+    | "missed_dose"
+    | "refusal"
+    | "help_requested"
+    | "leaving_home"
+    | "urgent_phrase"
+    | "system";
+  severity?: "info" | "warning" | "urgent";
+  title?: string;
   message: string;
+  refusalReason?: RefusalReason;
   status: "pending" | "sent" | "acknowledged";
   createdAt: string;
   acknowledgedAt?: string;
@@ -119,8 +137,8 @@ interface NotificationEvent {
 ```
 
 ## Cloud Functions Contract
-- `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, caregiver attention, or urgent.
-- `recordMedicationResponse`: validates and writes medication logs, including refusal reasons.
+- `classifyMedicationResponse`: classifies senior text into taken, snoozed, refused, help requested, unknown, or urgent.
+- `recordMedicationResponse`: validates and writes medication logs, including refusal reasons and caregiver-visible refusal/help/urgent notifications.
 - `completeRoutineEvent`: marks an event complete or skipped and creates missed-dose alerts when relevant medicines have no final response.
 - `simulateLeavingHome`: creates a leaving-home routine event and reminder notification.
 - `generateReminderCopy`: creates short friendly reminder text without medical advice.
